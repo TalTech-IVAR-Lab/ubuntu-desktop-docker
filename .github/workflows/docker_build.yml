@@ -50,3 +50,13 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
+
+      - name: Update description on Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          repository: TalTech-IVAR-Lab/ubuntu-desktop-docker
+          readme-filepath: ./README.md
+          short-description: ${{ github.event.repository.description }}
