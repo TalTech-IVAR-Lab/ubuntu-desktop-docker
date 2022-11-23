@@ -6,7 +6,7 @@
 
 > Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
 
-Dockerized Ubuntu Desktop environment with RDP and SSH access used by TalTech IVAR Lab. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
+Dockerized Ubuntu Desktop environment with RDP and SSH access used by [TalTech IVAR Lab][taltech_ivar_lab]. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
 
 ## What's included
 
@@ -32,18 +32,18 @@ To launch the container directly:
 ```bash
 docker run -d \
   --name=ubuntu-desktop \
-  --security-opt seccomp=unconfined `#optional` \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/London \
   -p 3389:3389 `#rdp` \
   -p 2222:22 `#ssh` \
-  --shm-size="1gb" `#optional` \
+  --shm-size="1gb" \
+  --security-opt seccomp=unconfined \
   --restart unless-stopped \
-  -e NVIDIA_VISIBLE_DEVICES=all taltechivarlab/ubuntu-desktop:20.04
+  -e NVIDIA_VISIBLE_DEVICES=alltaltechivarlab/ubuntu-desktop:20.04
 ```
 
-Once container has started, you must `ssh` into it (default password is `abc`):
+Once the container has started, you must `ssh` into it (default password is `abc`):
 
 ```bash
 ssh abc@localhost -p 2222
@@ -52,6 +52,8 @@ ssh abc@localhost -p 2222
 ...and change _abc_ user's default password following the displayed instructions.
 
 After that, you can use login _abc_ and the newly set password to login to the container using any remote desktop client. 
+
+> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data. It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
 
 ## Building locally
 
@@ -64,10 +66,11 @@ docker build -t taltechivarlab/ubuntu-desktop:20.04 .
 In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
 
 ```bash
-docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-desktop:noetic --output=oci .
+docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-desktop:20.04 --output=oci .
 ```
 
 
+[taltech_ivar_lab]: https://ivar.taltech.ee/
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
 [lsio]: https://www.linuxserver.io/
 [rdesktop_github]: https://github.com/linuxserver/docker-rdesktop
@@ -81,5 +84,8 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [materia]: https://github.com/nana-4/materia-theme
 [kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
-[Dockerhub]: https://hub.docker.com/
+[Dockerhub]: https://hub.docker.com/r/taltechivarlab/ubuntu-desktop
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
+[docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
+[docker_start]: https://docs.docker.com/engine/reference/commandline/start/
+[docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
