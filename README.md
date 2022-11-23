@@ -51,6 +51,17 @@ After that, you can use login _abc_ and the newly set password to login to the c
 
 ## Building locally
 
+If you want to build this image locally instead of pulling it from [Dockerhub], clone this repository and run the build:
+
+```bash
+docker build -t taltechivarlab/ubuntu-desktop:20.04 .
+```
+
+In case you want to build a multi-architecture image (e.g., to run it on Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in `--platforms` flag):
+
+```bash
+docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-desktop:noetic --output=oci .
+```
 
 
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
@@ -66,3 +77,5 @@ After that, you can use login _abc_ and the newly set password to login to the c
 [materia]: https://github.com/nana-4/materia-theme
 [kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
+[Dockerhub]: https://hub.docker.com/
+[docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
