@@ -1,5 +1,9 @@
 # Ubuntu Desktop Docker
 
+![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu&link=https://releases.ubuntu.com/focal/)
+![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/Docker%20Build?logo=github)
+
 > Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
 
 Dockerized Ubuntu Desktop environment with RDP and SSH access used by TalTech IVAR Lab. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
