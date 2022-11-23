@@ -43,7 +43,7 @@ docker run -d \
   -e NVIDIA_VISIBLE_DEVICES=alltaltechivarlab/ubuntu-desktop:20.04
 ```
 
-Once container has started, you must `ssh` into it (default password is `abc`):
+Once the container has started, you must `ssh` into it (default password is `abc`):
 
 ```bash
 ssh abc@localhost -p 2222
