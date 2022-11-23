@@ -81,5 +81,5 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [materia]: https://github.com/nana-4/materia-theme
 [kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
-[Dockerhub]: https://hub.docker.com/
+[Dockerhub]: https://hub.docker.com/r/taltechivarlab/ubuntu-desktop
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
