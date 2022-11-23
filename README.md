@@ -32,15 +32,15 @@ To launch the container directly:
 ```bash
 docker run -d \
   --name=ubuntu-desktop \
-  --security-opt seccomp=unconfined `#optional` \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/London \
   -p 3389:3389 `#rdp` \
   -p 2222:22 `#ssh` \
-  --shm-size="1gb" `#optional` \
+  --shm-size="1gb" \
+  --security-opt seccomp=unconfined \
   --restart unless-stopped \
-  -e NVIDIA_VISIBLE_DEVICES=all taltechivarlab/ubuntu-desktop:20.04
+  -e NVIDIA_VISIBLE_DEVICES=alltaltechivarlab/ubuntu-desktop:20.04
 ```
 
 Once container has started, you must `ssh` into it (default password is `abc`):
