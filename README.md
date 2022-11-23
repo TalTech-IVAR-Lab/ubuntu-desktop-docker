@@ -1,5 +1,9 @@
 # Ubuntu Desktop Docker
 
+![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu&link=https://releases.ubuntu.com/focal/)
+![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/Docker%20Build?logo=github)
+
 > Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
 
 Dockerized Ubuntu Desktop environment with RDP and SSH access used by TalTech IVAR Lab. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
@@ -57,7 +61,7 @@ If you want to build this image locally instead of pulling it from [Dockerhub], 
 docker build -t taltechivarlab/ubuntu-desktop:20.04 .
 ```
 
-In case you want to build a multi-architecture image (e.g., to run it on Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in `--platforms` flag):
+In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
 
 ```bash
 docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-desktop:noetic --output=oci .
