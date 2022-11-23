@@ -6,7 +6,7 @@
 
 > Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
 
-Dockerized Ubuntu Desktop environment with RDP and SSH access used by TalTech IVAR Lab. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
+Dockerized Ubuntu Desktop environment with RDP and SSH access used by [TalTech IVAR Lab][taltech_ivar_lab]. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
 
 ## What's included
 
@@ -68,6 +68,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 ```
 
 
+[taltech_ivar_lab]: https://ivar.taltech.ee/
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
 [lsio]: https://www.linuxserver.io/
 [rdesktop_github]: https://github.com/linuxserver/docker-rdesktop
