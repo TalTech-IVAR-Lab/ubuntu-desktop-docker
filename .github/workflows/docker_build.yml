@@ -47,7 +47,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: TalTech-IVAR-Lab/ubuntu-desktop-docker
+          repository: taltechivarlab/ubuntu-desktop
           readme-filepath: ./README.md
           short-description: ${{ github.event.repository.description }}
 
