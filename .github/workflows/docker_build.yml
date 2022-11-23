@@ -41,15 +41,6 @@ jobs:
             type=raw,value=20.04,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_metadata.outputs.tags }}
-          labels: ${{ steps.docker_metadata.outputs.labels }}
-
       - name: Update description on Docker Hub
         if: github.event_name != 'pull_request'
         uses: peter-evans/dockerhub-description@v3
@@ -59,3 +50,12 @@ jobs:
           repository: TalTech-IVAR-Lab/ubuntu-desktop-docker
           readme-filepath: ./README.md
           short-description: ${{ github.event.repository.description }}
+
+      - name: Build and push to Dockerhub
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
+          labels: ${{ steps.docker_metadata.outputs.labels }}
