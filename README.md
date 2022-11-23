@@ -23,7 +23,7 @@ In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_gi
   - [Materia] theme with [Kora] icon pack
   - [Plank] dock
 - Desktop look:
-  ![desktop screenshot from ubuntu desktop docker](docs/images/desktop.png "")
+  ![desktop screenshot from ubuntu desktop docker](https://raw.githubusercontent.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/main/docs/images/desktop.png "Default desktop environment in this Docker image")
 
 ## Usage
 
