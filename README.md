@@ -66,7 +66,7 @@ docker build -t taltechivarlab/ubuntu-desktop:20.04 .
 In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
 
 ```bash
-docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-desktop:noetic --output=oci .
+docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-desktop:20.04 --output=oci .
 ```
 
 
