@@ -59,8 +59,6 @@ RUN apt install -y python-is-python3
 RUN chown abc:abc /config && chmod 755 /config
 RUN echo "abc ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 USER abc
-#COPY files/zshell.sh /config/zshell.sh
-#RUN HOME=/config && bash /config/zshell.sh
 RUN HOME=/config && curl -fsSL https://raw.githubusercontent.com/JGroxz/presto-prezto/main/presto-prezto.sh | bash
 USER root
 RUN sed -i '/abc ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers
