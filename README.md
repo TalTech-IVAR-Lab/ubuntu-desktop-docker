@@ -1,8 +1,8 @@
 # Ubuntu Desktop Docker
 
-![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu&link=https://releases.ubuntu.com/focal/)
-![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/Docker%20Build?logo=github)
+[![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
+[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/Docker%20Build?logo=github)](https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/actions)
 
 > Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
 
