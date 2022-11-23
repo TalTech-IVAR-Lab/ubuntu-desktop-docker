@@ -53,6 +53,8 @@ ssh abc@localhost -p 2222
 
 After that, you can use login _abc_ and the newly set password to login to the container using any remote desktop client. 
 
+> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data. It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+
 ## Building locally
 
 If you want to build this image locally instead of pulling it from [Dockerhub], clone this repository and run the build:
@@ -84,3 +86,6 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [plank]: https://launchpad.net/plank
 [Dockerhub]: https://hub.docker.com/r/taltechivarlab/ubuntu-desktop
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
+[docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
+[docker_start]: https://docs.docker.com/engine/reference/commandline/start/
+[docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
