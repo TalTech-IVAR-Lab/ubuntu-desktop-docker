@@ -21,8 +21,7 @@ RUN git clone https://github.com/bikass/kora.git
 RUN cp -r kora/kora /usr/share/icons/
 
 # Default desktop configuration
-COPY files/dconf/user /etc/dconf/profile/user
-COPY files/dconf/local.d/ /etc/dconf/db/local.d/
+COPY files/etc/dconf/ /etc/dconf/
 RUN dbus-launch dconf update
 
 # Add "Open in Terminal" to the context menu in Caja file explorer
@@ -32,11 +31,11 @@ RUN apt install -y caja-open-terminal
 RUN ln -s "/usr/share/backgrounds/ubuntu-mate-photos/nasa-53884.jpg" "/usr/share/backgrounds/default.wallpaper"
 
 # Default apps configuration
-COPY files/.config/ /config/.config/
+COPY files/config/.config/ /config/.config/
 
 # OpenSSH (based on https://github.com/antoineco/sshd-s6-docker)
 RUN apt install -y openssh-server
-COPY files/services.d/ /etc/services.d/
+COPY files/etc/services.d/sshd/ /etc/services.d/sshd/
 
 # Terminator (instead of MATE Terminal)
 RUN apt remove -y mate-terminal
