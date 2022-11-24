@@ -36,7 +36,7 @@ docker run -d \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
   -p 3389:3389 `#rdp` \
-  -p 2222:22 `#ssh` \
+  -p 2222:2222 `#ssh` \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \

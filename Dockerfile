@@ -36,6 +36,7 @@ COPY files/config/.config/ /config/.config/
 # OpenSSH (based on https://github.com/antoineco/sshd-s6-docker)
 RUN apt install -y openssh-server
 COPY files/etc/services.d/sshd/ /etc/services.d/sshd/
+RUN echo "Port 2222" > /etc/ssh/sshd_config.d/custom_port.conf
 
 # Terminator (instead of MATE Terminal)
 RUN apt remove -y mate-terminal
