@@ -33,6 +33,10 @@ RUN ln -s "/usr/share/backgrounds/ubuntu-mate-photos/nasa-53884.jpg" "/usr/share
 # Default apps configuration
 COPY files/config/.config/ /config/.config/
 
+# Patch XRDP config (custom login screen styling)
+COPY files/etc/xrdp/ /etc/xrdp/
+COPY files/usr/share/xrdp/ /usr/share/xrdp/
+
 # OpenSSH (based on https://github.com/antoineco/sshd-s6-docker)
 RUN apt install -y openssh-server
 COPY files/etc/services.d/sshd/ /etc/services.d/sshd/
