@@ -22,6 +22,9 @@ In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_gi
 - GUI packages:
   - [Materia] theme with [Kora] icon pack
   - [Plank] dock
+- Custom [xrdp] login screen styling:
+  - Darker colors to match the default desktop theme
+  - Updated xrdp logo
 - Desktop look:
   ![desktop screenshot from ubuntu desktop docker](https://raw.githubusercontent.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/main/docs/images/desktop.png "Default desktop environment in this Docker image")
 
@@ -84,6 +87,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 [materia]: https://github.com/nana-4/materia-theme
 [kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
+[xrdp]: http://xrdp.org/
 [Dockerhub]: https://hub.docker.com/r/taltechivarlab/ubuntu-desktop
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
 [docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
