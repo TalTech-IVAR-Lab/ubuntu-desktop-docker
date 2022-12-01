@@ -30,6 +30,8 @@ In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_gi
 
 ## Usage
 
+### Quick start
+
 To launch the container directly:
 
 ```bash
@@ -38,8 +40,8 @@ docker run -d \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
-  -p 3389:3389 `#rdp` \
-  -p 2222:2222 `#ssh` \
+  -p 3389:3389 `# rdp` \
+  -p 2222:2222 `# ssh` \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \
@@ -54,9 +56,21 @@ ssh abc@localhost -p 2222
 
 ...and change _abc_ user's default password following the displayed instructions.
 
-After that, you can use login _abc_ and the newly set password to login to the container using any remote desktop client. 
+After that, you can use login _abc_ and the newly set password to log in to the container using any remote desktop client.
 
-> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data. It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+> 💡 When inside the container, you can switch your default shell to [Zsh][presto-prezto_demo] by running the following
+> command in the terminal:
+>
+> ```bash
+> sudo usermod --shell $(command -v zsh) abc
+> ```
+
+> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data.
+> It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+
+### Advanced usage
+
+For more advanced use cases, such as opening additional ports and enabling hardware graphics acceleration, please refer to the [Advanced Usage][docs_advanced_usage] doc.
 
 ## Building locally
 
@@ -73,6 +87,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 ```
 
 
+
 [taltech_ivar_lab]: https://ivar.taltech.ee/
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
 [lsio]: https://www.linuxserver.io/
@@ -84,6 +99,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 [htop]: https://htop.dev/
 [neofetch]: https://github.com/dylanaraps/neofetch
 [presto-prezto]: https://github.com/JGroxz/presto-prezto
+[presto-prezto_demo]: https://github.com/JGroxz/presto-prezto#demo
 [materia]: https://github.com/nana-4/materia-theme
 [kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
@@ -93,3 +109,4 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 [docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
 [docker_start]: https://docs.docker.com/engine/reference/commandline/start/
 [docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
+[docs_advanced_usage]: docs/ADVANCED_USAGE.md
