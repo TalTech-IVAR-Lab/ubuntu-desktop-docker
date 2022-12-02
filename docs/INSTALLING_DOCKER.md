@@ -14,8 +14,6 @@ Installation steps are already detailed well in the official guides, so here we 
 1. Install [Windows Subsystem for Linux (WSL2)][wsl2]
 2. Download & install [Docker Desktop for Windows][docker_desktop_windows_detailed]
 3. Launch Docker Desktop
-    
-Now you can run `docker` commands and start containers from the terminal!
 
 
 ## 🍎 Mac
@@ -25,8 +23,7 @@ Now you can run `docker` commands and start containers from the terminal!
 ### TL;DR:
 
 1. Download and install [Docker Desktop][docker_desktop_mac_detailed]
-    
-Now you can run `docker` commands and start containers from the terminal!
+2. Launch Docker Desktop
 
 
 ## 🐧 Linux
@@ -68,7 +65,15 @@ The commands differ depending on the Linux distribution, so if you want to insta
       
    3. Log out and back in for group changes to take effect.
 
-Now you can run `docker` commands and start containers from the terminal!
+
+## Testing your installation
+
+To test your Docker installation, run the [official hello-world container][docker_hello_world] from your terminal:
+```bash
+docker run hello-world
+```
+
+> ℹ️ If your Docker is running correctly, this command will result in a confirmation message with some additional info about how Docker got it done.
 
 
 
@@ -87,3 +92,5 @@ Now you can run `docker` commands and start containers from the terminal!
 [get_docker]: https://get.docker.com/com/engine/install/debian/#install-using-the-convenience-script
 [get_docker_github]: https://github.com/docker/docker-install/blob/master/install.sh
 [linux_permissions_networkchuck]: https://www.youtube.com/watch?v=jwnvKOjmtEA
+
+[docker_hello_world]: https://hub.docker.com/_/hello-world
