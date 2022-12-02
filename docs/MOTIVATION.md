@@ -32,6 +32,8 @@ Thus, we have decided to package our default development environment in a [Docke
 
 - If something goes wrong in the environment, simply starting the new container from the same image provides a clean slate to work with, no repetitive setup required; this encourages experimentation and learning.
 
+- The content of the image and any of its derivatives can be easily managed and updated through their Dockerfiles hosted in Git repositories (e.g. [Dockerfile of taltechivarlab/ubuntu-desktop][ubuntu_desktop_github_dockerfile]).
+
 - It is easy to distribute: all our images are published on Dockerhub under our [taltechivarlab][taltechivarlab_dockerhub] account and can be started with a single `docker run` command.
 
 With this, we hope that you now have a better understanding of what containers are and why using them is [worth a try][ubuntu_desktop_github_quickstart].
@@ -59,3 +61,4 @@ With this, we hope that you now have a better understanding of what containers a
 [dockerhub]: https://hub.docker.com/
 [taltechivarlab_dockerhub]: https://hub.docker.com/u/taltechivarlab
 [ubuntu_desktop_github_quickstart]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker#quick-start
+[ubuntu_desktop_github_dockerfile]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/Dockerfile
