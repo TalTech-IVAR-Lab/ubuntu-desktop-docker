@@ -8,6 +8,8 @@
 
 Dockerized Ubuntu Desktop environment with RDP and SSH access used by [TalTech IVAR Lab][taltech_ivar_lab]. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
 
+> 💡 To know how this project was created and why it is useful, please read our [Motivation doc][docs_motivation]. 
+
 ## What's included
 
 In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_github], our image applies the following modifications:
@@ -32,7 +34,7 @@ In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_gi
 
 ### Quick start
 
-To launch the container directly:
+Once you have [installed Docker][docs_install_docker], to launch the container directly:
 
 ```bash
 docker run -d \
@@ -110,3 +112,5 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 [docker_start]: https://docs.docker.com/engine/reference/commandline/start/
 [docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
 [docs_advanced_usage]: docs/ADVANCED_USAGE.md
+[docs_install_docker]: docs/INSTALLING_DOCKER.md
+[docs_motivation]: docs/MOTIVATION.md
