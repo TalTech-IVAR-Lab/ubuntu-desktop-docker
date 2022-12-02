@@ -30,13 +30,13 @@ Thus, we have decided to package our default development environment in a [Docke
 
 - We can get it up and running on any computer in minutes ([install Docker][docs_installing_docker] + pull and run the image). This is especially easy on Linux hosts, where the whole procedure takes [just 5 commands in a terminal][docs_installing_docker_linux].
 
-- If something goes wrong in the environment, simply starting the new container from the same image provides a clean slate to work with, no repetitive setup required; this encourages experimentation and learning.
+- If something goes wrong in the environment, simply starting the new container from the same image provides a clean slate to work with, no repetitive setup required. This encourages experimentation and learning.
 
 - The content of the image and any of its derivatives can be easily managed and updated through their Dockerfiles hosted in Git repositories (e.g. [Dockerfile of taltechivarlab/ubuntu-desktop][ubuntu_desktop_github_dockerfile]).
 
 - It is easy to distribute: all our images are published on Dockerhub under our [taltechivarlab][taltechivarlab_dockerhub] account and can be started with a single `docker run` command.
 
-With this, we hope that you now have a better understanding of what containers are and why using them is [worth a try][ubuntu_desktop_github_quickstart].
+With this, we hope that you now have a better understanding of what containers are and why using them is [worth a try 😉][ubuntu_desktop_github_usage]
 
 
 
@@ -60,5 +60,5 @@ With this, we hope that you now have a better understanding of what containers a
 [docs_installing_docker_linux]: INSTALLING_DOCKER.md#-linux
 [dockerhub]: https://hub.docker.com/
 [taltechivarlab_dockerhub]: https://hub.docker.com/u/taltechivarlab
-[ubuntu_desktop_github_quickstart]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker#quick-start
+[ubuntu_desktop_github_usage]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker#usage
 [ubuntu_desktop_github_dockerfile]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/Dockerfile
