@@ -24,7 +24,7 @@ All these points are explained in much greater detail in [this blogpost by Docke
 
 ## 🧪 How TalTech IVAR Lab uses containers?
 
-In our laboratory, we often work with complex software such as ROS, which normally requires time-consuming installation and an environment with the specific set of tools and pre-configured settings. Doing this setup manually every time when we need a fresh ROS installation is a tedious task that is prone to human error, and packaging it in a VM still poses problems with distribution. 
+In our [laboratory][taltech_ivar_lab] we often work with complex software such as ROS, which normally requires time-consuming installation and an environment with the specific set of tools and pre-configured settings. Doing this setup manually every time when we need a fresh ROS installation is a tedious task that is prone to human error, and packaging it in a VM still poses problems with distribution. 
 
 Thus, we have decided to package our default development environment in a [Docker image][ubuntu_desktop_github] instead. This brings multiple benefits:
 
