@@ -8,7 +8,9 @@
 
 Dockerized Ubuntu Desktop environment with RDP and SSH access used by [TalTech IVAR Lab][taltech_ivar_lab]. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
 
-> 💡 To know how this project was created and why it is useful, please read our [Motivation doc][docs_motivation]. 
+## Why and how
+
+Learn why this project was created and how it is useful by reading our [Motivation doc][docs_motivation].
 
 ## What's included
 
