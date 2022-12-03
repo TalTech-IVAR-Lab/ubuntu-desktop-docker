@@ -22,7 +22,7 @@ Installation steps are already detailed well in the official guides, so here we 
 
 ### TL;DR:
 
-1. Download and install [Docker Desktop][docker_desktop_mac_detailed]
+1. Download and install [Docker Desktop for Mac][docker_desktop_mac_detailed]
 2. Launch Docker Desktop
 
 

@@ -30,7 +30,7 @@ Thus, we have decided to package our default development environment in a [Docke
 
 - We can get it up and running on any computer in minutes ([install Docker][docs_installing_docker] + pull and run the image). This is especially easy on Linux hosts, where the whole procedure takes [just 5 commands in a terminal][docs_installing_docker_linux].
 
-- If something goes wrong in the environment, simply starting the new container from the same image provides a clean slate to work with, no repetitive setup required. This encourages experimentation and learning.
+- If something goes wrong in the environment, simply starting a new container from the same image provides a clean slate to work with, no repetitive setup required. This encourages experimentation and learning.
 
 - The content of the image and any of its derivatives can be easily managed and updated through their Dockerfiles hosted in Git repositories (e.g. [Dockerfile of taltechivarlab/ubuntu-desktop][ubuntu_desktop_github_dockerfile]).
 
