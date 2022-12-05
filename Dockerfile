@@ -58,6 +58,9 @@ RUN apt install -y cmatrix
 # Python 3 alias
 RUN apt install -y python-is-python3
 
+# Standard software build dependencies
+RUN apt install -y build-essential
+
 # Pre-configured Zsh (through the installation script)
 # Note: here we give the abc user a temporary passwordless access to sudo, as the installation script uses sudo internally
 RUN chown abc:abc /config && chmod 755 /config
