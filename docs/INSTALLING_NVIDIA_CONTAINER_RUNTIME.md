@@ -1,10 +1,10 @@
 # Installing Nvidia Container Runtime
 
-If your host machine has an Nvidia GPU and you want to use it for [hardware graphics acceleration][docs_advanced_usage] inside your container, you will have to install [Nvidia container runtime][nvidia_container_runtime_github] on the host. We will not cover all the installation steps in this documentation, because Nvidia provides an [extensive official guide][nvidia_container_runtime_installation] on the subject matter, so please follow it to install the software. 
+If your host machine has an Nvidia GPU and you want to use it for [hardware graphics acceleration][docs_advanced_usage] inside your container, you will have to install [Nvidia container runtime][nvidia_container_runtime_github] on the host.
 
-However, here are some tips which may be useful during the installation process:
+We will not cover all the installation steps in this documentation, because Nvidia provides an [extensive official guide][nvidia_container_runtime_installation] on the subject matter, so please follow it to install the software. However, here are some tips which may be useful during the installation process:
 
-- Before you can install the [runtime][nvidia_container_runtime_github], [install Docker][docs_installing_docker] and [Nvidia driver][nvidia_driver] on your host machine.
+- Before you can install the runtime, [install Docker][docs_installing_docker] and [Nvidia driver][nvidia_driver] on your host machine.
 
 
 - If you have [Docker Desktop][docker_desktop] installed on the host, your [Nvidia container runtime][nvidia_container_runtime_github] installation may not work after completing the [guide][nvidia_container_runtime_installation], complaining that runtime cannot be found. This happens because Docker Desktop overrides [Docker’s default configuration file (_daemon.json_)][docker_configuration_file], and that file is not updated automatically during the installation. To make Docker see the new Nvidia runtime, you have to add this runtime in Docker Desktop’s settings (highlighted text):
