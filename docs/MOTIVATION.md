@@ -14,7 +14,7 @@ All these points are explained in much greater detail in [this blogpost by Docke
 
 ## 🐳 Why Docker containers are good?
 
-[Docker] is an [open source][docker_open_source] platform for developing and distributing containers, which is steadily gaining traction as the standard environment for running production software. Adopting it has the following benefits:
+[Docker] is an [open source][docker_open_source] platform for developing and distributing containers. It is steadily becoming the standard environment for running production software. Adopting it has the following benefits:
 
 - Docker provides a multiplatform [engine][docker_engine], which allows to easily run the same containers on Linux, Windows and macOS hosts. 
 - It has an official online registry for sharing container images called [Docker Hub][dockerhub], which provides free storage for public container images.
