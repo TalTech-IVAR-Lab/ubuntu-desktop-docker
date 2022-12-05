@@ -26,7 +26,7 @@ As our images are based on [linuxserver/rdesktop:ubuntu-mate][rdesktop_github], 
   docker run -d \
     `# all flags from the original run command here` \
     --gpus=all \
-     taltechivarlab/ros-desktop:noetic
+     taltechivarlab/ubuntu-desktop:20.04
   ```
   
    > 💡 You can verify that your Nvidia card was mounted successfully by running the `nvidia-smi --list-gpu` command in terminal inside the container. If everything went well, you will see your GPU in the list of devices output by this command. Otherwise, the command will fail.
@@ -38,7 +38,7 @@ As our images are based on [linuxserver/rdesktop:ubuntu-mate][rdesktop_github], 
   docker run -d \
     `# all flags from the original run command here` \
     --device=/dev/dri:/dev/dri \
-     taltechivarlab/ros-desktop:noetic
+     taltechivarlab/ubuntu-desktop:20.04
   ```
 
 
