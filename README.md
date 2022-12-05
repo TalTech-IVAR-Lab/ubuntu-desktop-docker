@@ -98,6 +98,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-
 [rdesktop_github]: https://github.com/linuxserver/docker-rdesktop
 [rdesktop_github_hardware_acceleration]: https://github.com/linuxserver/docker-rdesktop#hardware-acceleration-ubuntu-container-only
 [openssh]: https://www.openssh.com/
+[build-essential]: https://linuxhint.com/install-build-essential-ubuntu/
 [terminator]: https://gnome-terminator.org/
 [zsh]: https://www.zsh.org/
 [htop]: https://htop.dev/
