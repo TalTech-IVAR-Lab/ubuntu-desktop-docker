@@ -8,7 +8,7 @@ We will use Visual Studio Code as an example. You can use any other IDE that sup
 
 ## Using Remote SSH in Visual Studio Code
 
-We refer ещ the original documentation. Please, visit [Remote Development in Visual Studio Code](https://code.visualstudio.com/docs/remote/ssh) for more details.
+We refer to the original documentation. Please, visit [Remote Development in Visual Studio Code](https://code.visualstudio.com/docs/remote/ssh) for more details.
 
 ### Prerequisites
 
@@ -22,18 +22,18 @@ Install the [Remote Development extension pack](https://marketplace.visualstudio
 ### Connect to the container
 
 To connect to a remote host for the first time, follow these steps:
+- Verify you can connect to the SSH host by running the following command from a terminal / PowerShell: 
 
- - Verify you can connect to the SSH host by running the following command from a terminal / PowerShell:
-    -  
     ```bash
     ssh abc@localhost -p 2222 
     ```
-    > Note: The default host is `localhost` and the default port is `2222`. You can use different host and port if you are running the container on oher machine or port
-- Open the Command Palette (Ctrl+Shift+P) and run the `Remote-SSH: Connect to Host` command.
+    > **Note**: The default host is `localhost` and the default port is `2222`. You can use different host and port if you are running the container on oher machine or port
+   Open the Command Palette (Ctrl+Shift+P) and run the `Remote-SSH: Connect to Host` command.
 - Select `Add New SSH Host` in the quick pick. Then type the SSH command you just ran in the terminal / PowerShell. Possibly you will need to select the SSH configuration file.
 - Then select `Linux` as the operating system.
 - You should now be asked to enter the password for the SSH host. Enter the password and you should be connected. 
 - If you have done everything correctly, at the bottom left corner you should see:
+
 ![SSH:localhost](./images/remote_development/connection_status_screenshot.png "SSH:localhost")
 
 ### Open a folder in the container
