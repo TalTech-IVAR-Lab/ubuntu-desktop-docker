@@ -7,6 +7,7 @@ RUN apt update -y
 # Utilities
 RUN apt install -y nano
 RUN apt install -y git
+RUN apt install -y iputils-ping iproute2 nmap
 
 # Desktop theme
 RUN apt install -y materia-gtk-theme
