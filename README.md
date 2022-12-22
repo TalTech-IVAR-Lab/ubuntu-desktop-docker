@@ -23,6 +23,7 @@ In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_gi
   - Utilities:
       - [htop] process monitor
       - [neofetch] system information tool
+      - [nmap] network mapping tool
 - GUI packages:
   - [Materia] theme with [Kora] icon pack
   - [Plank] dock
@@ -107,6 +108,7 @@ The project is in early stages of development, so we are not yet accepting contr
 [zsh]: https://www.zsh.org/
 [htop]: https://htop.dev/
 [neofetch]: https://github.com/dylanaraps/neofetch
+[nmap]: https://nmap.org
 [presto-prezto]: https://github.com/JGroxz/presto-prezto
 [presto-prezto_demo]: https://github.com/JGroxz/presto-prezto#demo
 [materia]: https://github.com/nana-4/materia-theme
