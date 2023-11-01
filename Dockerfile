@@ -5,7 +5,7 @@ FROM linuxserver/rdesktop:ubuntu-mate-version-77a977e9
 RUN apt update -y
 
 # Utilities
-RUN apt install -y nano
+RUN apt install -y nano vim
 RUN apt install -y git
 RUN apt install -y iputils-ping iproute2 nmap
 
