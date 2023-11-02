@@ -1,6 +1,7 @@
 # Ubuntu Desktop Docker
 
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
+[![Ubuntu version](https://img.shields.io/badge/Ubuntu-22.04-informational?logo=ubuntu)](https://releases.ubuntu.com/jammy/)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/actions)
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
 
@@ -45,12 +46,12 @@ docker run -d \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
-  -p 3390:3390 `# rdp` \
-  -p 2222:2222 `# ssh` \
+  -p 3390:3389 `# rdp` \
+  -p 2222:22 `# ssh` \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \
-  taltechivarlab/ubuntu-desktop:20.04
+  taltechivarlab/ubuntu-desktop:22.04
 ```
 
 Once the container has started, you must `ssh` into it (default password is `abc`):
@@ -82,13 +83,13 @@ For more advanced use cases, such as opening additional ports and enabling hardw
 If you want to build this image locally instead of pulling it from [Dockerhub], clone this repository and run the build:
 
 ```bash
-docker build -t taltechivarlab/ubuntu-desktop:20.04 .
+docker build --file Dockerfile_Jammy -t taltechivarlab/ubuntu-desktop:22.04 .
 ```
 
 In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
 
 ```bash
-docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ubuntu-desktop:20.04 --output=oci .
+docker buildx build --platform=linux/amd64,linux/arm64 --file Dockerfile_Jammy -t taltechivarlab/ubuntu-desktop:22.04 --output=oci .
 ```
 
 ## Contributing
