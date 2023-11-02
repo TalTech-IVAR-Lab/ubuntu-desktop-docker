@@ -21,7 +21,7 @@ jobs:
           - dockerfile: Dockerfile_Jammy
             tag: 22.04
     concurrency:
-      group: ${{ github.ref }}-${{ github.workflow }}
+      group: ${{ github.ref }}-${{ github.workflow }}-${{ matrix.tag }}
       cancel-in-progress: true
     steps:
       - name: Checkout
