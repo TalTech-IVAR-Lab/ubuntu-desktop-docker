@@ -49,7 +49,7 @@ jobs:
           flavor: |
             latest=auto
           tags: |
-            type=sha,prefix=${{ matrix.tag }}-
+            type=sha,suffix=-${{ matrix.tag }}
             type=raw,value=${{ matrix.tag }},enable={{is_default_branch}}
 
       - name: Build and push to Dockerhub
