@@ -60,6 +60,39 @@ these exact amd64 image/host combinations. It does not prove a zero-copy path,
 sustained delivery at the configured maximum frame rate, Intel/AMD encoding,
 or arm64 behavior.
 
+The images default to `AUTO_GPU=true`. At startup, TalTech initialization selects
+the first mapped `/dev/dri/renderD*` device for both `DRINODE` (rendering) and
+`DRI_NODE` (encoding), which makes the stream eligible for PixelFlux zero-copy.
+Explicit values are validated and preserved; matching values are zero-copy
+eligible, while different values intentionally use CPU readback. Acceptance
+still requires a real browser stream and the PixelFlux log decision
+`[Wayland] Decision: Zero-Copy path active.` rather than configuration alone.
+
+### Four-lane zero-copy capture and NVENC — amd64 NVIDIA
+
+On 2026-09-01, all four candidate lanes containing this zero-copy implementation
+were built and exercised on `lab-001` with an NVIDIA GeForce RTX 4090 D and driver
+`580.126.09`. Each test used an authenticated real browser stream, selected
+`DRINODE=/dev/dri/renderD128` and `DRI_NODE=/dev/dri/renderD128`, and required
+both exact PixelFlux decisions:
+
+- `[Wayland] NVENC Encoder initialized successfully.`
+- `[Wayland] Decision: Zero-Copy path active.`
+
+| Ubuntu lane | Tested image ID | Browser stream | Container log SHA-256 | Browser log SHA-256 |
+| --- | --- | --- | --- | --- |
+| Focal 20.04 | `sha256:e21da502b66c823d3cdebef718d16e207bcb2982beb20db6bc9491d6a5cbeac2` | 30 seconds | `68742dc669bb1daa4cd3f80bfc32cd5e0f029175d15c2d52496bb475e95ef182` | `178705774bf5a96b0a0cda6a817e68439907cdf817417b39fe270e4681801640` |
+| Jammy 22.04 | `sha256:1ed71b974ac149767b18a075538c5890099d366eedfc7becacbad09da3f07c70` | 30 seconds | `6c90066b681b705d5a965bd17c65c171aa615aec192351f6904f2cf0a33ff11a` | `760c313ff5f5545c901edce6864e84bd4642ebf6a8d55f02e7c5960a38966639` |
+| Noble 24.04 | `sha256:e955ebbe8b9945f4e39de233ee8b77f0c93cd53ef92852f40ea617a4cc9726e3` | 30 seconds | `f46ff38ca6febb651a9b0193c32c3f5b4e1d0a03aebeebd1dde331c2093a7296` | `addcbf3eb14dcf54df3234343bbfaab7894a164ea662e2cde32394c51d54fe88` |
+| Resolute 26.04 | `sha256:8cb96d6676e18193bc081b21eccd2b422e0732bba0b9f753d271b1194db25642` | 30 seconds | `1ecee1c7a2df7c502db7b00dcb2db5dbd966cb094150ab9cba6769b5f3153d69` | `c0c2bb7d21a84bc90774c5a45ab717dcad1495beb7ef0123434f48e86bd4c447` |
+
+No PixelFlux readback, split-GPU, or CPU-encoding fallback decision appeared in
+any accepted container log. Four-lane zero-copy proof: `PASS`.
+
+This proves same-GPU zero-copy capture feeding NVENC for these exact amd64,
+NVIDIA, image, and host combinations. It does not establish zero-copy on arm64,
+Intel/AMD, split-GPU configurations, or other host/driver combinations.
+
 ### Ubuntu 24.04 Noble — amd64 NVIDIA Selkies/Wayland
 
 - Date: 2026-08-29

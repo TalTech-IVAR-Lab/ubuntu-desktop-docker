@@ -69,9 +69,10 @@ EXPECTED_RENDERER_REGEX='NVIDIA|AMD|Intel' taltech-verify-gpu
 Run this separately for NVIDIA (`--gpus all`) and Intel/AMD
 (`--device=/dev/dri:/dev/dri`) hosts. Focal, Jammy, Noble, and Resolute Selkies
 on amd64 with NVIDIA have passed the application-rendering and H.264/NVENC
-gates on `lab-001`. These results do not establish zero-copy operation.
-Intel/AMD and arm64 combinations remain pending. Record exact results in the
-[GPU validation matrix][gpu_validation].
+gates on `lab-001`; matching rendering and encoding nodes also produced
+zero-copy capture feeding NVENC in real browser sessions. Intel/AMD, arm64,
+split-GPU, and other host/driver combinations remain pending. Record exact
+results in the [GPU validation matrix][gpu_validation].
 
 
 

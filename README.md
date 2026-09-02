@@ -95,6 +95,10 @@ Open `https://HOST:3001/`. The self-signed certificate must be accepted by the
 client or replaced at a reverse proxy. The desktop targets 1920×1080, 96 DPI,
 and up to 60 FPS; actual delivery depends on the browser, GPU, and network.
 Omit `--gpus=all` on non-NVIDIA hosts; retain the DRM mapping where available.
+With the default `AUTO_GPU=true`, the first mapped `/dev/dri/renderD*` device is
+used for both rendering and encoding so PixelFlux can use its zero-copy path.
+On multi-GPU hosts, set both `DRINODE` and `DRI_NODE` to the same render device;
+setting them to different devices deliberately enables CPU readback.
 
 SSH is key-only. Add the desired public keys to
 `/config/.ssh/authorized_keys`; web authentication does not unlock the Linux

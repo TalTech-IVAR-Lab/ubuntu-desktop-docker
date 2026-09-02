@@ -353,6 +353,48 @@ class ImageContractTests(unittest.TestCase):
         self.assertIn(invocation, init)
         self.assertLess(init.index(invocation), init.index("CUSTOM_USER must be set"))
 
+    def test_zero_copy_validation_records_runtime_proof(self) -> None:
+        gpu_validation = GPU_VALIDATION.read_text()
+        advanced = ADVANCED_USAGE.read_text()
+
+        self.assertIn("Four-lane zero-copy proof: `PASS`", gpu_validation)
+        for image_id in (
+            "sha256:e21da502b66c823d3cdebef718d16e207bcb2982beb20db6bc9491d6a5cbeac2",
+            "sha256:1ed71b974ac149767b18a075538c5890099d366eedfc7becacbad09da3f07c70",
+            "sha256:e955ebbe8b9945f4e39de233ee8b77f0c93cd53ef92852f40ea617a4cc9726e3",
+            "sha256:8cb96d6676e18193bc081b21eccd2b422e0732bba0b9f753d271b1194db25642",
+        ):
+            self.assertIn(image_id, gpu_validation)
+        for evidence_hash in (
+            "68742dc669bb1daa4cd3f80bfc32cd5e0f029175d15c2d52496bb475e95ef182",
+            "178705774bf5a96b0a0cda6a817e68439907cdf817417b39fe270e4681801640",
+            "6c90066b681b705d5a965bd17c65c171aa615aec192351f6904f2cf0a33ff11a",
+            "760c313ff5f5545c901edce6864e84bd4642ebf6a8d55f02e7c5960a38966639",
+            "f46ff38ca6febb651a9b0193c32c3f5b4e1d0a03aebeebd1dde331c2093a7296",
+            "addcbf3eb14dcf54df3234343bbfaab7894a164ea662e2cde32394c51d54fe88",
+            "1ecee1c7a2df7c502db7b00dcb2db5dbd966cb094150ab9cba6769b5f3153d69",
+            "c0c2bb7d21a84bc90774c5a45ab717dcad1495beb7ef0123434f48e86bd4c447",
+        ):
+            self.assertIn(evidence_hash, gpu_validation)
+        self.assertIn(
+            "`DRINODE=/dev/dri/renderD128` and `DRI_NODE=/dev/dri/renderD128`",
+            gpu_validation,
+        )
+        self.assertIn(
+            "`[Wayland] NVENC Encoder initialized successfully.`",
+            gpu_validation,
+        )
+        self.assertIn(
+            "`[Wayland] Decision: Zero-Copy path active.`",
+            gpu_validation,
+        )
+        self.assertIn(
+            "No PixelFlux readback, split-GPU, or CPU-encoding fallback decision",
+            gpu_validation,
+        )
+        self.assertNotIn("These results do not establish zero-copy operation", advanced)
+        self.assertIn("zero-copy capture feeding NVENC", advanced)
+
     def test_gpu_verification_harness_is_not_ignored_by_git(self) -> None:
         result = subprocess.run(
             ["git", "check-ignore", "-q", str(GPU_VERIFY.relative_to(ROOT))],
