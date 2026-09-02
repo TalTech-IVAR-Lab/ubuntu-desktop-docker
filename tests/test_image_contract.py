@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import os
 import re
 import stat
@@ -12,6 +13,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from types import ModuleType
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +27,10 @@ GPU_VALIDATION = ROOT / "docs" / "GPU_VALIDATION.md"
 GPU_VERIFY = ROOT / "files" / "usr" / "local" / "bin" / "taltech-verify-gpu"
 SELKIES_FILES = ROOT / "selkies-files"
 SELKIES_S6_ROOT = SELKIES_FILES / "etc" / "s6-overlay" / "s6-rc.d"
+SELKIES_INIT = SELKIES_S6_ROOT / "init-taltech-selkies" / "run"
+GPU_SELECTOR = (
+    SELKIES_FILES / "usr" / "local" / "libexec" / "taltech-select-gpu-nodes.py"
+)
 SELKIES_PYPROJECT = ROOT / "pyproject.toml"
 SELKIES_UV_LOCK = ROOT / "uv.lock"
 SELKIES_REQUIREMENTS = ROOT / "selkies-requirements.txt"
@@ -39,6 +45,15 @@ IVAR_WALLPAPER_SHA256 = (
 
 
 class ImageContractTests(unittest.TestCase):
+    @staticmethod
+    def _load_gpu_selector(name: str) -> ModuleType:
+        spec = importlib.util.spec_from_file_location(name, GPU_SELECTOR)
+        if spec is None or spec.loader is None:
+            raise AssertionError(f"Could not load {GPU_SELECTOR}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def test_only_current_production_dockerfiles_remain(self) -> None:
         self.assertTrue((ROOT / "Dockerfile").is_file())
         self.assertTrue((ROOT / "Dockerfile.compat").is_file())
@@ -195,6 +210,148 @@ class ImageContractTests(unittest.TestCase):
             "openswr",
         ):
             self.assertIn(software_renderer, content)
+
+    def test_selkies_configures_same_gpu_for_zero_copy(self) -> None:
+        for dockerfile in (SELKIES_DOCKERFILE, SELKIES_COMPAT_DOCKERFILE):
+            with self.subTest(dockerfile=dockerfile.name):
+                self.assertIn("AUTO_GPU=true", dockerfile.read_text())
+
+        init = SELKIES_INIT.read_text()
+        selector = GPU_SELECTOR.read_text()
+        self.assertIn("renderD[0-9]+", selector)
+        self.assertIn("os.lstat(node)", selector)
+        self.assertIn("stat.S_ISLNK", selector)
+        self.assertIn("stat.S_ISCHR", selector)
+        self.assertIn('os.environ.get("DRINODE", "")', selector)
+        self.assertIn('os.environ.get("DRI_NODE", "")', selector)
+        self.assertIn("discover_render_nodes()", selector)
+        self.assertIn('"DRINODE"', selector)
+        self.assertIn('"DRI_NODE"', selector)
+        self.assertIn("same-device zero-copy expected", selector)
+        self.assertIn("use different devices", selector)
+        self.assertIn("CPU readback expected", selector)
+        self.assertIn(
+            "/usr/bin/python3 /usr/local/libexec/taltech-select-gpu-nodes.py",
+            init,
+        )
+
+    def test_gpu_selector_exercises_the_complete_decision_tree(self) -> None:
+        self.assertTrue(GPU_SELECTOR.is_file(), GPU_SELECTOR)
+        module = self._load_gpu_selector("taltech_gpu_selector")
+
+        first = "/dev/dri/renderD128"
+        second = "/dev/dri/renderD129"
+        cases = (
+            ("false", "", "", [], ("", "", "cpu-fallback")),
+            ("true", "", "", [], ("", "", "cpu-fallback")),
+            ("true", "", "", [second, first], (first, first, "zero-copy")),
+            ("false", first, "", [], (first, first, "zero-copy")),
+            ("false", "", second, [], (second, second, "zero-copy")),
+            ("false", first, first, [], (first, first, "zero-copy")),
+            ("true", first, second, [], (first, second, "readback")),
+        )
+        for auto_gpu, render, encode, discovered, expected in cases:
+            with self.subTest(
+                auto_gpu=auto_gpu,
+                render=render,
+                encode=encode,
+                discovered=discovered,
+            ):
+                selection = module.select_gpu_nodes(
+                    auto_gpu=auto_gpu,
+                    render_node=render,
+                    encode_node=encode,
+                    discovered_nodes=discovered,
+                    validator=lambda _node: None,
+                )
+                self.assertEqual(expected, tuple(selection))
+
+        with self.assertRaisesRegex(ValueError, "AUTO_GPU must be true or false"):
+            module.select_gpu_nodes(
+                auto_gpu="yes",
+                render_node="",
+                encode_node="",
+                discovered_nodes=[],
+                validator=lambda _node: None,
+            )
+
+    def test_gpu_selector_rejects_unsafe_render_nodes_behaviorally(self) -> None:
+        self.assertTrue(GPU_SELECTOR.is_file(), GPU_SELECTOR)
+        module = self._load_gpu_selector("taltech_gpu_validator")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            regular = root / "renderD128"
+            symlink = root / "renderD129"
+            regular.write_text("not a device")
+            symlink.symlink_to("/dev/null")
+
+            for node, message in (
+                (regular, "non-symlink character device"),
+                (symlink, "non-symlink character device"),
+                (root / "renderD130", "existing non-symlink character device"),
+                (root / "card0", "renderD<number>"),
+            ):
+                with self.subTest(node=node):
+                    with self.assertRaisesRegex(ValueError, message):
+                        module.validate_render_node(str(node), device_root=root)
+
+    def test_gpu_selector_writes_environment_for_dependent_services(self) -> None:
+        self.assertTrue(GPU_SELECTOR.is_file(), GPU_SELECTOR)
+        module = self._load_gpu_selector("taltech_gpu_environment")
+
+        with tempfile.TemporaryDirectory() as directory:
+            environment_dir = Path(directory)
+            module.write_container_environment(
+                environment_dir,
+                "/dev/dri/renderD128",
+                "/dev/dri/renderD128",
+                owner=None,
+            )
+            for name in ("DRINODE", "DRI_NODE"):
+                target = environment_dir / name
+                self.assertEqual("/dev/dri/renderD128", target.read_text())
+                self.assertEqual(0o644, stat.S_IMODE(target.stat().st_mode))
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            real_environment = root / "environment"
+            real_environment.mkdir()
+            environment_link = root / "environment-link"
+            environment_link.symlink_to(real_environment, target_is_directory=True)
+
+            with self.assertRaises(OSError):
+                module.write_container_environment(
+                    environment_link,
+                    "/dev/dri/renderD128",
+                    "/dev/dri/renderD128",
+                    owner=None,
+                )
+            self.assertEqual([], list(real_environment.iterdir()))
+
+        for protected_name in ("DRINODE", "DRI_NODE"):
+            with self.subTest(protected_name=protected_name):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    environment_dir = root / "environment"
+                    environment_dir.mkdir()
+                    protected_target = root / f"{protected_name}.target"
+                    protected_target.write_text("protected")
+                    (environment_dir / protected_name).symlink_to(protected_target)
+
+                    with self.assertRaises(OSError):
+                        module.write_container_environment(
+                            environment_dir,
+                            "/dev/dri/renderD128",
+                            "/dev/dri/renderD128",
+                            owner=None,
+                        )
+                    self.assertEqual("protected", protected_target.read_text())
+
+        init = SELKIES_INIT.read_text()
+        invocation = "/usr/bin/python3 /usr/local/libexec/taltech-select-gpu-nodes.py"
+        self.assertIn(invocation, init)
+        self.assertLess(init.index(invocation), init.index("CUSTOM_USER must be set"))
 
     def test_gpu_verification_harness_is_not_ignored_by_git(self) -> None:
         result = subprocess.run(

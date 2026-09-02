@@ -17,6 +17,13 @@ validate_port() {
 
 validate_port SSH_PORT "${SSH_PORT}"
 
+# PixelFlux can keep captured frames on the GPU only when rendering and encoding
+# use the same DRM render node. Respect explicit split-GPU configurations, fill
+# a missing peer from the explicit node, or select the first mapped render node
+# when AUTO_GPU is enabled. With no mapped GPU, leave the CPU fallback untouched.
+/usr/bin/python3 /usr/local/libexec/taltech-select-gpu-nodes.py \
+    --environment-dir /run/s6/container_environment
+
 if [[ ! ${CUSTOM_USER:-} =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
     echo "CUSTOM_USER must be set to a simple non-empty username" >&2
     exit 64

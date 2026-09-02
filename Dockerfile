@@ -31,6 +31,7 @@ LABEL org.opencontainers.image.title="TalTech IVAR Lab Ubuntu Desktop (Selkies)"
       org.opencontainers.image.version="${VERSION}"
 
 ENV DEBIAN_FRONTEND=noninteractive \
+    AUTO_GPU=true \
     DESKTOP_USER=${DESKTOP_USER} \
     HOME=/config \
     NVIDIA_DRIVER_CAPABILITIES=all \

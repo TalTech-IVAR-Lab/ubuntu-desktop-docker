@@ -330,6 +330,7 @@ LABEL org.opencontainers.image.title="TalTech IVAR Lab Ubuntu Desktop (Selkies c
 
 # Runtime paths select the private compatibility libraries before distro copies.
 ENV DEBIAN_FRONTEND=noninteractive \
+    AUTO_GPU=true \
     DESKTOP_USER=${DESKTOP_USER} \
     DISPLAY=:1 \
     HOME=/config \
