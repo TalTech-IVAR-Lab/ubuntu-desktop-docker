@@ -1,0 +1,126 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+validate_port() {
+    local name=$1
+    local value=$2
+    if [[ ! ${value} =~ ^[0-9]{1,5}$ ]]; then
+        echo "${name} must be an integer between 1 and 65535" >&2
+        exit 64
+    fi
+    local decimal_value=$((10#${value}))
+    if ((decimal_value < 1 || decimal_value > 65535)); then
+        echo "${name} must be an integer between 1 and 65535" >&2
+        exit 64
+    fi
+}
+
+validate_port SSH_PORT "${SSH_PORT}"
+
+if [[ ! ${CUSTOM_USER:-} =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
+    echo "CUSTOM_USER must be set to a simple non-empty username" >&2
+    exit 64
+fi
+
+web_password=${PASSWORD:-}
+if [[ -z ${web_password} && -n ${PASSWORD_FILE:-} ]]; then
+    if [[ ! -f ${PASSWORD_FILE} || -L ${PASSWORD_FILE} ]]; then
+        echo "PASSWORD_FILE must name a regular, non-symlink file" >&2
+        exit 78
+    fi
+    web_password=$(<"${PASSWORD_FILE}")
+fi
+if [[ -z ${web_password} ]]; then
+    echo "PASSWORD or PASSWORD_FILE must be set" >&2
+    exit 64
+fi
+if ((${#web_password} < 12)); then
+    echo "Selkies web password must contain at least 12 characters" >&2
+    exit 64
+fi
+printf '%s' "${web_password}" > /run/s6/container_environment/PASSWORD
+chown root:abc /run/s6/container_environment/PASSWORD
+chmod 0640 /run/s6/container_environment/PASSWORD
+unset web_password
+
+as_abc() {
+    s6-setuidgid abc "$@"
+}
+
+xdg_runtime=/config/.XDG
+if [[ -L ${xdg_runtime} || ( -e ${xdg_runtime} && ! -d "${xdg_runtime}" ) ]]; then
+    echo "Selkies runtime path must be a real directory: ${xdg_runtime}" >&2
+    exit 78
+fi
+install -d -m 0700 "${xdg_runtime}"
+chown -h abc:abc "${xdg_runtime}"
+chmod 0700 "${xdg_runtime}"
+install -d -o abc -g abc -m 0700 /run/pixelflux
+# XDG_RUNTIME_DIR is transient. Keeping it under the persisted profile is an
+# upstream convention, so clear every stale socket, lock, and helper directory
+# before changing UID/GID or starting a replacement container. -xdev refuses
+# to descend into an unexpected nested mount.
+find "${xdg_runtime}" -xdev -mindepth 1 -delete
+
+cache_root=/config/.cache
+if [[ -L ${cache_root} || ( -e ${cache_root} && ! -d "${cache_root}" ) ]]; then
+    echo "Selkies cache path must be a real directory: ${cache_root}" >&2
+    exit 78
+fi
+install -d -m 0700 "${cache_root}"
+# Do not follow symlinks or cross a nested mount while repairing old persisted
+# profiles that were initialized by root.
+find "${cache_root}" -xdev -exec chown -h abc:abc {} +
+
+if [[ -L /config/.ssh || ( -e /config/.ssh && ! -d /config/.ssh ) ]]; then
+    echo "/config/.ssh must be a real directory" >&2
+    exit 78
+fi
+install -d -m 0700 /config/.ssh
+chown -h abc:abc /config/.ssh
+chmod 0700 /config/.ssh
+if [[ -L /config/.ssh/authorized_keys ]]; then
+    echo "/config/.ssh/authorized_keys must not be a symlink" >&2
+    exit 78
+fi
+if [[ -f /config/.ssh/authorized_keys ]]; then
+    chown abc:abc /config/.ssh/authorized_keys
+    chmod 0600 /config/.ssh/authorized_keys
+fi
+if [[ -L /config/.config || ( -e /config/.config && ! -d /config/.config ) ]]; then
+    echo "/config/.config must be a real directory" >&2
+    exit 78
+fi
+if [[ ! -d /config/.config ]]; then
+    as_abc cp -a /defaults/config/.config /config/.config
+fi
+# Preserve symlink boundaries and do not cross operator-supplied nested mounts.
+find /config/.config -xdev -exec chown -h abc:abc {} +
+
+state_root=/var/lib/taltech-desktop
+if [[ -L ${state_root} || ( -e ${state_root} && ! -d ${state_root} ) ]]; then
+    echo "Container state path is not a real directory: ${state_root}" >&2
+    exit 78
+fi
+if [[ ! -d ${state_root} ]]; then
+    mkdir -- "${state_root}"
+fi
+if [[ $(stat -c %u "${state_root}") -ne 0 ]]; then
+    echo "Container state path must be owned by root: ${state_root}" >&2
+    exit 78
+fi
+chown root:root "${state_root}"
+chmod 0700 "${state_root}"
+
+ssh_secret_dir="${state_root}/ssh"
+install -d -o root -g root -m 0700 "${ssh_secret_dir}"
+if [[ ! -s "${ssh_secret_dir}/ssh_host_ed25519_key" ]]; then
+    ssh-keygen -q -N '' -t ed25519 -f "${ssh_secret_dir}/ssh_host_ed25519_key"
+fi
+if [[ ! -s "${ssh_secret_dir}/ssh_host_rsa_key" ]]; then
+    ssh-keygen -q -N '' -t rsa -b 3072 -f "${ssh_secret_dir}/ssh_host_rsa_key"
+fi
+chmod 0600 "${ssh_secret_dir}"/ssh_host_*_key
+chmod 0644 "${ssh_secret_dir}"/ssh_host_*_key.pub
+chown root:root "${ssh_secret_dir}"/ssh_host_*
+install -d -m 0755 /run/sshd
