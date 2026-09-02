@@ -1,9 +1,6 @@
 # Ubuntu Desktop Docker
 
-[![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
-[![Ubuntu version](https://img.shields.io/badge/Ubuntu-22.04-informational?logo=ubuntu)](https://releases.ubuntu.com/jammy/)
-[![Ubuntu version](https://img.shields.io/badge/Ubuntu-24.04-informational?logo=ubuntu)](https://releases.ubuntu.com/noble/)
-[![Ubuntu version](https://img.shields.io/badge/Ubuntu-26.04-informational?logo=ubuntu)](https://releases.ubuntu.com/resolute/)
+[![Ubuntu versions: 20.04, 22.04, 24.04, and 26.04](https://img.shields.io/badge/Ubuntu-20.04%20%7C%2022.04%20%7C%2024.04%20%7C%2026.04-informational?logo=ubuntu)](#image-roster)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/actions)
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
 
