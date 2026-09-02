@@ -2,12 +2,16 @@
 
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-22.04-informational?logo=ubuntu)](https://releases.ubuntu.com/jammy/)
+[![Ubuntu version](https://img.shields.io/badge/Ubuntu-24.04-informational?logo=ubuntu)](https://releases.ubuntu.com/noble/)
+[![Ubuntu version](https://img.shields.io/badge/Ubuntu-26.04-informational?logo=ubuntu)](https://releases.ubuntu.com/resolute/)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ubuntu-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/actions)
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ubuntu-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
 
-> Based on the [linuxserver/rdesktop:ubuntu-mate][rdesktop_github] image by [linuxserver.io][lsio]
+> Ubuntu desktop containers for [TalTech IVAR Lab][taltech_ivar_lab], with a
+> browser-native Selkies desktop across every supported Ubuntu LTS release.
 
-Dockerized Ubuntu Desktop environment with RDP and SSH access used by [TalTech IVAR Lab][taltech_ivar_lab]. Primarily intended as a base image for our [ROS Desktop][ros_desktop_github] images.
+These images provide persistent development desktops and form the base of our
+[ROS Desktop][ros_desktop_github] images.
 
 ## Why and how
 
@@ -15,82 +19,163 @@ Learn why this project was created and how it is useful by reading our [Motivati
 
 ## What's included
 
-In addition to what is already in [linuxserver/rdesktop:ubuntu-mate][rdesktop_github], our image applies the following modifications:
+All images include:
 
+- MATE desktop
 - [OpenSSH] server
+- Persistent user home under `/config`, with root-owned host keys in a separate state volume
+- `PUID`/`PGID` user mapping inherited from the LinuxServer base
 - Command line packages:
   - [Terminator] as the default terminal application
-  - [Zsh] with [preconfigured plugins][presto-prezto] for the default _abc_ user
+  - [Zsh]
   - Utilities:
       - [htop] process monitor
-      - [neofetch] system information tool
+      - Neofetch on Focal/Jammy/Noble; Fastfetch on Resolute
       - [nmap] network mapping tool
 - GUI packages:
-  - [Materia] theme with [Kora] icon pack
+  - Yaru Dark theme with the packaged Papirus Dark icon set
+  - IVAR Lab Full HD wallpaper
   - [Plank] dock
-- Custom [xrdp] login screen styling:
-  - Darker colors to match the default desktop theme
-  - Updated xrdp logo
-- Desktop look:
-  ![desktop screenshot from ubuntu desktop docker](https://raw.githubusercontent.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/main/docs/images/desktop.png "Default desktop environment in this Docker image")
+
+All published images use Selkies over HTTPS with a pinned, matched
+Selkies/PixelFlux/PCMFlux frontend and backend. `Dockerfile.compat` places that
+stack over LinuxServer's Focal and Jammy Ubuntu+s6 bases; the main `Dockerfile`
+builds the native Noble and Resolute lanes.
+
+## Image roster
+
+| Ubuntu | Tag | Desktop path | Intended ROS base |
+|---|---|---|---|
+| Ubuntu 26.04 Resolute | `26.04` | Native Selkies lane | Future ROS 2 LTS images |
+| Ubuntu 24.04 Noble | `24.04`, `latest` | Native Selkies lane | ROS 2 Jazzy |
+| Ubuntu 22.04 Jammy | `22.04` | Selkies compatibility lane | ROS 2 Humble |
+| Ubuntu 20.04 Focal | `20.04` | Selkies compatibility lane; Ubuntu ESM | ROS Noetic (upstream EOL) |
+
+Only the two production Dockerfiles remain in the working tree. The removed
+XRDP and archived `linuxserver/rdesktop` implementations remain available in
+Git history if forensic comparison is ever needed. CI publishes `latest` only
+for Noble.
 
 ## Usage
 
-### Quick start
+### Selkies quick start
 
-Once you have [installed Docker][docs_install_docker], to launch the container directly:
+Create a password file containing at least 12 characters and restrict it to the
+current user:
+
+```bash
+umask 077
+openssl rand -base64 32 > "$HOME/.taltech-selkies-password"
+```
+
+Then launch the required image tag on a trusted network or VPN. The example
+uses Noble; `20.04`, `22.04`, and `26.04` use the same runtime interface:
 
 ```bash
 docker run -d \
   --name=ubuntu-desktop \
+  --gpus=all \
+  --device=/dev/dri:/dev/dri \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
-  -p 3390:3389 `# rdp` \
+  -e CUSTOM_USER=taltech \
+  -e PASSWORD_FILE=/run/secrets/selkies-password \
+  -p 3001:3001 `# https` \
   -p 2222:22 `# ssh` \
+  -v "$HOME/.taltech-selkies-password:/run/secrets/selkies-password:ro" \
+  -v ubuntu-desktop-config:/config \
+  -v ubuntu-desktop-state:/var/lib/taltech-desktop \
   --shm-size="1gb" \
-  --security-opt seccomp=unconfined \
   --restart unless-stopped \
-  taltechivarlab/ubuntu-desktop:22.04
+  taltechivarlab/ubuntu-desktop:24.04
 ```
 
-Once the container has started, you must `ssh` into it (default password is `abc`):
+Open `https://HOST:3001/`. The self-signed certificate must be accepted by the
+client or replaced at a reverse proxy. The desktop targets 1920×1080, 96 DPI,
+and up to 60 FPS; actual delivery depends on the browser, GPU, and network.
+Omit `--gpus=all` on non-NVIDIA hosts; retain the DRM mapping where available.
 
-```bash
-ssh abc@localhost -p 2222
-```
+SSH is key-only. Add the desired public keys to
+`/config/.ssh/authorized_keys`; web authentication does not unlock the Linux
+account. The remote user has no passwordless sudo and no Docker socket.
 
-...and change _abc_ user's default password following the displayed instructions.
+The internal Linux desktop account defaults to `ivar`. To use a different
+account name in a custom build, pass `--build-arg DESKTOP_USER=taltech`.
+`DESKTOP_USER` is fixed at build time and is independent of `CUSTOM_USER`,
+which controls only the Selkies web login. Changing it does not change the
+persistent home path (`/config`) or the runtime `PUID`/`PGID` mapping.
 
-After that, you can use login _abc_ and the newly set password to log in to the container using any remote desktop client.
+Use all remote access only on a trusted network or behind a VPN. Do not publish
+the ports directly to the Internet. The separate state volume keeps root-owned
+host keys outside user-writable `/config`.
 
-> 💡 When inside the container, you can switch your default shell to [Zsh][presto-prezto_demo] by running the following
-> command in the terminal:
->
-> ```bash
-> sudo usermod --shell $(command -v zsh) abc
-> ```
-
-> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data.
-> It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+> ☝ You can [stop][docker_stop], [restart][docker_start], or replace the container without losing either named volume.
+> Delete those volumes explicitly only when you intend to discard user data and regenerate the SSH host identity.
 
 ### Advanced usage
 
-For more advanced use cases, such as opening additional ports and enabling hardware graphics acceleration, please refer to the [Advanced Usage][docs_advanced_usage] doc.
+For more advanced use cases, such as opening additional ports and enabling
+hardware graphics acceleration, refer to [Advanced Usage][docs_advanced_usage]
+and the [GPU support notes][docs_gpu_validation].
+
+### Selkies maintenance boundary
+
+LinuxServer does not publish maintained Focal, Jammy, or Noble Webtop lanes.
+The compatibility images therefore transplant a pinned stack onto pinned
+Ubuntu bases, while the native Noble and Resolute images also pin their runtime
+foundations. Updating only one Selkies/PixelFlux/PCMFlux component is
+unsupported; the matched set must be upgraded and runtime-tested together.
+This gives us explicit release control, but security refreshes are our
+responsibility.
 
 ## Building locally
 
-If you want to build this image locally instead of pulling it from [Dockerhub], clone this repository and run the build:
+Build Focal and Jammy with `Dockerfile.compat`; build Noble and Resolute with
+the main `Dockerfile`. The immutable base arguments below match the CI matrix:
 
 ```bash
-docker build --file Dockerfile_Jammy -t taltechivarlab/ubuntu-desktop:22.04 .
+docker build -f Dockerfile.compat \
+  --build-arg EXPECTED_UBUNTU_CODENAME=focal \
+  --build-arg UBUNTU_BASE_IMAGE=ghcr.io/linuxserver/baseimage-ubuntu@sha256:a784bc01de33e51655d8e179fac80077a055aee79d9b01c4c7839c6aebbc01ae \
+  -t taltechivarlab/ubuntu-desktop:20.04 .
+docker build -f Dockerfile.compat \
+  --build-arg EXPECTED_UBUNTU_CODENAME=jammy \
+  --build-arg UBUNTU_BASE_IMAGE=ghcr.io/linuxserver/baseimage-ubuntu@sha256:0d16f40efc3663125f1004b70feff091f2d13771f1cc005ea30c28bd777e05e2 \
+  -t taltechivarlab/ubuntu-desktop:22.04 .
+docker build -f Dockerfile -t taltechivarlab/ubuntu-desktop:24.04 .
+docker build -f Dockerfile \
+  --build-arg EXPECTED_UBUNTU_CODENAME=resolute \
+  --build-arg SELKIES_RUNTIME_BASE=ghcr.io/linuxserver/baseimage-selkies@sha256:8bb0d9343b764034c048c2c3895127bfe885a824fcc93ad472281fdd6d4a582f \
+  -t taltechivarlab/ubuntu-desktop:26.04 .
 ```
 
 In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
 
 ```bash
-docker buildx build --platform=linux/amd64,linux/arm64 --file Dockerfile_Jammy -t taltechivarlab/ubuntu-desktop:22.04 --output=oci .
+docker buildx build --platform=linux/amd64,linux/arm64 \
+  -f Dockerfile.compat \
+  --build-arg EXPECTED_UBUNTU_CODENAME=jammy \
+  --build-arg UBUNTU_BASE_IMAGE=ghcr.io/linuxserver/baseimage-ubuntu@sha256:0d16f40efc3663125f1004b70feff091f2d13771f1cc005ea30c28bd777e05e2 \
+  -t taltechivarlab/ubuntu-desktop:22.04 --output=oci .
 ```
+
+### Updating the Selkies Python lock
+
+`pyproject.toml` is the human-edited dependency policy; `uv.lock` is the
+generated, cross-platform artifact lock. Update exact versions in
+`pyproject.toml`, then regenerate and verify the lock with:
+
+```bash
+uv lock
+uv lock --check
+```
+
+The Dockerfiles use a digest-pinned uv image to validate and export the lock with
+artifact hashes, then sync it into their pre-created Python environments. This
+preserves the native image's system-site-packages behavior and the compatibility
+image's isolated Python/compiler environment. Do not hand-edit `uv.lock` or
+replace the locked, hash-checked install with an unconstrained `pip install`.
 
 ## Contributing
 
@@ -100,27 +185,16 @@ The project is in early stages of development, so we are not yet accepting contr
 
 [taltech_ivar_lab]: https://ivar.taltech.ee/
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
-[lsio]: https://www.linuxserver.io/
-[rdesktop_github]: https://github.com/linuxserver/docker-rdesktop
-[rdesktop_github_hardware_acceleration]: https://github.com/linuxserver/docker-rdesktop#hardware-acceleration-ubuntu-container-only
 [openssh]: https://www.openssh.com/
-[build-essential]: https://linuxhint.com/install-build-essential-ubuntu/
 [terminator]: https://gnome-terminator.org/
 [zsh]: https://www.zsh.org/
 [htop]: https://htop.dev/
 [neofetch]: https://github.com/dylanaraps/neofetch
 [nmap]: https://nmap.org
-[presto-prezto]: https://github.com/JGroxz/presto-prezto
-[presto-prezto_demo]: https://github.com/JGroxz/presto-prezto#demo
-[materia]: https://github.com/nana-4/materia-theme
-[kora]: https://github.com/bikass/kora
 [plank]: https://launchpad.net/plank
-[xrdp]: http://xrdp.org/
-[Dockerhub]: https://hub.docker.com/r/taltechivarlab/ubuntu-desktop
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
 [docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
 [docker_start]: https://docs.docker.com/engine/reference/commandline/start/
-[docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
 [docs_advanced_usage]: docs/ADVANCED_USAGE.md
-[docs_install_docker]: docs/INSTALLING_DOCKER.md
+[docs_gpu_validation]: docs/GPU_VALIDATION.md
 [docs_motivation]: docs/MOTIVATION.md
