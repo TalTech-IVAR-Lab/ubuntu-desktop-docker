@@ -12,7 +12,8 @@ These images provide persistent development desktops and form the base of our
 
 ## Why and how
 
-Learn why this project was created and how it is useful by reading our [Motivation doc][docs_motivation].
+The [motivation document][docs_motivation] describes the original use case and
+design goals.
 
 ## What's included
 
@@ -41,21 +42,19 @@ builds the native Noble and Resolute lanes.
 
 ## Image roster
 
-| Ubuntu | Tag | Desktop path | Intended ROS base |
-|---|---|---|---|
-| Ubuntu 26.04 Resolute | `26.04` | Native Selkies lane | Future ROS 2 LTS images |
-| Ubuntu 24.04 Noble | `24.04`, `latest` | Native Selkies lane | ROS 2 Jazzy |
-| Ubuntu 22.04 Jammy | `22.04` | Selkies compatibility lane | ROS 2 Humble |
-| Ubuntu 20.04 Focal | `20.04` | Selkies compatibility lane; Ubuntu ESM | ROS Noetic (upstream EOL) |
+| Ubuntu | Tag | Intended ROS base |
+|---|---|---|
+| Ubuntu 26.04 Resolute | `26.04` | Future ROS 2 LTS images |
+| Ubuntu 24.04 Noble | `24.04`, `latest` | ROS 2 Jazzy |
+| Ubuntu 22.04 Jammy | `22.04` | ROS 2 Humble |
+| Ubuntu 20.04 Focal | `20.04` | ROS Noetic (upstream EOL) |
 
-Only the two production Dockerfiles remain in the working tree. The removed
-XRDP and archived `linuxserver/rdesktop` implementations remain available in
-Git history if forensic comparison is ever needed. CI publishes `latest` only
-for Noble.
+Versioned tags select the corresponding Ubuntu release. `latest` points to
+Ubuntu 24.04 Noble.
 
 ## Usage
 
-### Selkies quick start
+### Quick start
 
 Create a password file containing at least 12 characters and restrict it to the
 current user:
@@ -120,15 +119,12 @@ For more advanced use cases, such as opening additional ports and enabling
 hardware graphics acceleration, refer to [Advanced Usage][docs_advanced_usage]
 and the [GPU support notes][docs_gpu_validation].
 
-### Selkies maintenance boundary
+### Under the hood
 
-LinuxServer does not publish maintained Focal, Jammy, or Noble Webtop lanes.
-The compatibility images therefore transplant a pinned stack onto pinned
-Ubuntu bases, while the native Noble and Resolute images also pin their runtime
-foundations. Updating only one Selkies/PixelFlux/PCMFlux component is
-unsupported; the matched set must be upgraded and runtime-tested together.
-This gives us explicit release control, but security refreshes are our
-responsibility.
+Focal and Jammy combine pinned Ubuntu+s6 bases with the pinned Selkies stack.
+Noble and Resolute use pinned Selkies runtime bases. Selkies, PixelFlux, and
+PCMFlux are treated as one compatibility set and must be upgraded and tested
+together.
 
 ## Building locally
 
@@ -151,7 +147,8 @@ docker build -f Dockerfile \
   -t taltechivarlab/ubuntu-desktop:26.04 .
 ```
 
-In case you want to build a multi-architecture image (e.g. to run it on a Raspberry Pi), you can build for multiple platforms using the [Docker Buildx][docker_buildx] backend (by specifying them in the `--platform` flag):
+Use [Docker Buildx][docker_buildx] and `--platform` to build for multiple
+architectures, such as `amd64` and `arm64`:
 
 ```bash
 docker buildx build --platform=linux/amd64,linux/arm64 \
@@ -180,9 +177,7 @@ replace the locked, hash-checked install with an unconstrained `pip install`.
 
 ## Contributing
 
-The project is in early stages of development, so we are not yet accepting contributions from outside our university organization. 
-
-
+Contributions are currently limited to members of the TalTech organization.
 
 [taltech_ivar_lab]: https://ivar.taltech.ee/
 [ros_desktop_github]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker
