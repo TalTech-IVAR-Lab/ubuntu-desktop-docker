@@ -1,70 +1,100 @@
-# This workflow is based on https://dev.to/cloudx/multi-arch-docker-images-the-easy-way-with-github-actions-4k54
 name: "Build Docker images"
 run-name: "Building Docker images on '${{ github.head_ref || github.ref }}'"
 
-# Controls when the workflow will run
 on:
   workflow_dispatch:
   push:
     branches:
       - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
 
 jobs:
   build:
     name: "Build Docker images"
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     strategy:
       matrix:
         include:
-          - dockerfile: Dockerfile_Focal
+          - codename: focal
             tag: 20.04
-          - dockerfile: Dockerfile_Jammy
+            dockerfile: Dockerfile.compat
+            base_image: ghcr.io/linuxserver/baseimage-ubuntu@sha256:a784bc01de33e51655d8e179fac80077a055aee79d9b01c4c7839c6aebbc01ae
+          - codename: jammy
             tag: 22.04
+            dockerfile: Dockerfile.compat
+            base_image: ghcr.io/linuxserver/baseimage-ubuntu@sha256:0d16f40efc3663125f1004b70feff091f2d13771f1cc005ea30c28bd777e05e2
+          - codename: noble
+            tag: 24.04
+            dockerfile: Dockerfile
+            base_image: ghcr.io/linuxserver/baseimage-selkies@sha256:bdbdb9fa0b7505e6d8b4ed2a357e711b7bd53ab96e7f9f11a3d3bbfecafb3663
+          - codename: resolute
+            tag: 26.04
+            dockerfile: Dockerfile
+            base_image: ghcr.io/linuxserver/baseimage-selkies@sha256:8bb0d9343b764034c048c2c3895127bfe885a824fcc93ad472281fdd6d4a582f
     concurrency:
       group: ${{ github.ref }}-${{ github.workflow }}-${{ matrix.tag }}
       cancel-in-progress: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Run image contract tests
+        run: python3 -B -m unittest -v tests.test_image_contract
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Generate Docker metadata
         id: docker_metadata
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: taltechivarlab/ubuntu-desktop
           flavor: |
-            latest=auto
+            latest=false
           tags: |
-            type=sha,suffix=-${{ matrix.tag }}
+            type=sha,prefix=,suffix=-${{ matrix.tag }}
             type=raw,value=${{ matrix.tag }},enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ matrix.tag == '24.04' && github.ref == 'refs/heads/main' }}
 
       - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          build-args: |
+            UBUNTU_CODENAME=${{ matrix.codename }}
+            UBUNTU_VERSION=${{ matrix.tag }}
+            EXPECTED_UBUNTU_CODENAME=${{ matrix.codename }}
+            UBUNTU_BASE_IMAGE=${{ matrix.base_image }}
+            SELKIES_RUNTIME_BASE=${{ matrix.base_image }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
+          cache-from: type=gha,scope=ubuntu-${{ matrix.codename }}
+          cache-to: type=gha,mode=max,scope=ubuntu-${{ matrix.codename }}
 
       - name: Update description on Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: peter-evans/dockerhub-description@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.tag == '24.04'
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
