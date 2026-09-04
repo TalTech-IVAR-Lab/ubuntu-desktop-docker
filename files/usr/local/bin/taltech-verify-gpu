@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    echo "GPU_ACCELERATION=FAIL" >&2
+    echo "reason=$1" >&2
+    exit 1
+}
+
+shopt -s nullglob
+render_nodes=(/dev/dri/renderD*)
+if ((${#render_nodes[@]} > 0)); then
+    printf 'render_nodes=%s\n' "${render_nodes[*]}"
+else
+    echo "render_nodes=none"
+fi
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+    echo "nvidia_runtime=present"
+    if ! nvidia_output=$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader); then
+        fail "nvidia-smi failed"
+    fi
+    printf '%s\n' "${nvidia_output}"
+else
+    echo "nvidia_runtime=absent"
+fi
+
+[[ -n ${DISPLAY:-} ]] || fail "DISPLAY is unset; run this command inside the active remote desktop session"
+command -v glxinfo >/dev/null 2>&1 || fail "glxinfo is unavailable"
+if ! glx_output=$(glxinfo -B); then
+    fail "glxinfo failed"
+fi
+
+renderer=""
+vendor=""
+version=""
+while IFS=: read -r key value; do
+    value=${value# }
+    case "${key}" in
+        "OpenGL vendor string") vendor=${value} ;;
+        "OpenGL renderer string") renderer=${value} ;;
+        "OpenGL core profile version string"|"OpenGL version string")
+            [[ -n ${version} ]] || version=${value}
+            ;;
+    esac
+done <<< "${glx_output}"
+
+[[ -n ${renderer} ]] || fail "glxinfo did not report an OpenGL renderer"
+printf 'display=%s\n' "${DISPLAY}"
+printf 'opengl_vendor=%s\n' "${vendor}"
+printf 'opengl_renderer=%s\n' "${renderer}"
+printf 'opengl_version=%s\n' "${version}"
+
+renderer_lower=${renderer,,}
+case "${renderer_lower}" in
+    *llvmpipe*|*softpipe*|*swrast*|*software\ rasterizer*|*lavapipe*|*swiftshader*|*openswr*)
+        fail "software renderer detected: ${renderer}"
+        ;;
+esac
+
+if [[ -n ${EXPECTED_RENDERER_REGEX:-} ]] && ! [[ ${renderer} =~ ${EXPECTED_RENDERER_REGEX} ]]; then
+    fail "renderer '${renderer}' does not match EXPECTED_RENDERER_REGEX"
+fi
+
+if ((${#render_nodes[@]} == 0)) && ! command -v nvidia-smi >/dev/null 2>&1; then
+    fail "no render node or NVIDIA runtime is visible"
+fi
+
+echo "GPU_ACCELERATION=PASS"

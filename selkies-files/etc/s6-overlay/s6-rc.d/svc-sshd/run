@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+exec s6-notifyoncheck -w 500 -c "nc -z 127.0.0.1 ${SSH_PORT}" \
+    /usr/sbin/sshd -D -e -p "${SSH_PORT}"

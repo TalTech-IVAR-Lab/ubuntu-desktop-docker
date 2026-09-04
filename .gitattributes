@@ -1,0 +1,2 @@
+# Vendored unified diffs preserve upstream source indentation verbatim.
+patches/*.patch -whitespace

@@ -1,0 +1,511 @@
+# syntax=docker/dockerfile:1.7
+
+# Focal/Jammy compatibility image. It keeps the distro Python untouched while
+# supplying newer graphics and Selkies components in isolated prefixes.
+ARG UBUNTU_BASE_IMAGE=ghcr.io/linuxserver/baseimage-ubuntu@sha256:a784bc01de33e51655d8e179fac80077a055aee79d9b01c4c7839c6aebbc01ae
+ARG UV_IMAGE=ghcr.io/astral-sh/uv@sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa
+
+FROM ${UV_IMAGE} AS uv
+
+# Current LinuxServer Selkies image supplies the pinned frontend, service graph,
+# and configuration templates. Native binaries are rebuilt or installed in the
+# target Ubuntu release; none are copied across the glibc boundary.
+FROM ghcr.io/linuxserver/baseimage-selkies@sha256:7f4f69e5184e3e1876e96ca0c5d66bc3ef5ffe3d47a910cbf6366fe59db3e972 AS current_selkies
+
+# Build a GPU-capable Xvfb and modern Xwayland stack against the target Ubuntu
+# ABI. Every downloaded source archive is versioned and checksum-bound.
+FROM ${UBUNTU_BASE_IMAGE} AS xvfb_builder
+ARG MESON_VERSION=1.5.2
+ARG MESON_SHA256=f955e09ab0d71ef180ae85df65991d58ed8430323de7d77a37e11c9ea630910b
+ARG XORGPROTO_VERSION=2024.1
+ARG XORGPROTO_SHA256=372225fd40815b8423547f5d890c5debc72e88b91088fbfb13158c20495ccb59
+ARG XORG_SERVER_VERSION=21.1.24
+ARG XORG_SERVER_SHA256=1a4eb36ca65cc3b1b936566d677a9786e13c11cd5806e951ac55f3f5ce3984af
+ARG WAYLAND_VERSION=1.23.1
+ARG WAYLAND_SHA256=864fb2a8399e2d0ec39d56e9d9b753c093775beadc6022ce81f441929a81e5ed
+ARG WAYLAND_PROTOCOLS_VERSION=1.34
+ARG WAYLAND_PROTOCOLS_SHA256=c59b27cacd85f60baf4ee5f80df5c0d15760ead6a2432b00ab7e2e0574dcafeb
+ARG LIBDRM_VERSION=2.4.124
+ARG LIBDRM_SHA256=ac36293f61ca4aafaf4b16a2a7afff312aa4f5c37c9fbd797de9e3c0863ca379
+ARG LIBXCVT_VERSION=0.1.3
+ARG LIBXCVT_SHA256=a929998a8767de7dfa36d6da4751cdbeef34ed630714f2f4a767b351f2442e01
+ARG XWAYLAND_VERSION=24.1.13
+ARG XWAYLAND_SHA256=173aea3d6f79609164c04528e1c8e4c9b60fcd59391c3c9dad4667297d727fb6
+
+ADD --checksum=sha256:f955e09ab0d71ef180ae85df65991d58ed8430323de7d77a37e11c9ea630910b \
+    https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz \
+    /tmp/meson-${MESON_VERSION}.tar.gz
+ADD --checksum=sha256:372225fd40815b8423547f5d890c5debc72e88b91088fbfb13158c20495ccb59 \
+    https://xorg.freedesktop.org/archive/individual/proto/xorgproto-${XORGPROTO_VERSION}.tar.xz \
+    /tmp/xorgproto-${XORGPROTO_VERSION}.tar.xz
+ADD --checksum=sha256:1a4eb36ca65cc3b1b936566d677a9786e13c11cd5806e951ac55f3f5ce3984af \
+    https://xorg.freedesktop.org/archive/individual/xserver/xorg-server-${XORG_SERVER_VERSION}.tar.xz \
+    /tmp/xorg-server-${XORG_SERVER_VERSION}.tar.xz
+ADD --checksum=sha256:864fb2a8399e2d0ec39d56e9d9b753c093775beadc6022ce81f441929a81e5ed \
+    https://gitlab.freedesktop.org/wayland/wayland/-/releases/${WAYLAND_VERSION}/downloads/wayland-${WAYLAND_VERSION}.tar.xz \
+    /tmp/wayland-${WAYLAND_VERSION}.tar.xz
+ADD --checksum=sha256:c59b27cacd85f60baf4ee5f80df5c0d15760ead6a2432b00ab7e2e0574dcafeb \
+    https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/${WAYLAND_PROTOCOLS_VERSION}/downloads/wayland-protocols-${WAYLAND_PROTOCOLS_VERSION}.tar.xz \
+    /tmp/wayland-protocols-${WAYLAND_PROTOCOLS_VERSION}.tar.xz
+ADD --checksum=sha256:ac36293f61ca4aafaf4b16a2a7afff312aa4f5c37c9fbd797de9e3c0863ca379 \
+    https://dri.freedesktop.org/libdrm/libdrm-${LIBDRM_VERSION}.tar.xz \
+    /tmp/libdrm-${LIBDRM_VERSION}.tar.xz
+ADD --checksum=sha256:a929998a8767de7dfa36d6da4751cdbeef34ed630714f2f4a767b351f2442e01 \
+    https://www.x.org/releases/individual/lib/libxcvt-${LIBXCVT_VERSION}.tar.xz \
+    /tmp/libxcvt-${LIBXCVT_VERSION}.tar.xz
+ADD --checksum=sha256:173aea3d6f79609164c04528e1c8e4c9b60fcd59391c3c9dad4667297d727fb6 \
+    https://xorg.freedesktop.org/archive/individual/xserver/xwayland-${XWAYLAND_VERSION}.tar.xz \
+    /tmp/xwayland-${XWAYLAND_VERSION}.tar.xz
+COPY patches/xorg-server-21.1.24-xvfb-dri3.patch /tmp/xorg-server-21.1.24-xvfb-dri3.patch
+
+# Build the patched Xvfb first, followed by its private Wayland/Xwayland
+# dependency stack. Only the resulting binaries and prefix enter the runtime.
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      bison \
+      build-essential \
+      ca-certificates \
+      flex \
+      libdrm-dev \
+      libepoxy-dev \
+      libexpat1-dev \
+      libffi-dev \
+      libgbm-dev \
+      libgcrypt20-dev \
+      libpixman-1-dev \
+      libtirpc-dev \
+      libwayland-dev \
+      libxfont-dev \
+      libxkbfile-dev \
+      libxshmfence-dev \
+      ninja-build \
+      patch \
+      pkg-config \
+      python3 \
+      python3-distutils \
+      xfonts-utils \
+      xorg-dev \
+      xutils-dev \
+      xz-utils; \
+    mkdir -p \
+      /opt/meson \
+      /tmp/libdrm-src \
+      /tmp/libxcvt-src \
+      /tmp/wayland-src \
+      /tmp/wayland-protocols-src \
+      /tmp/xwayland-src \
+      /tmp/xorgproto-src \
+      /tmp/xorg-server-src; \
+    tar -xzf "/tmp/meson-${MESON_VERSION}.tar.gz" \
+      -C /opt/meson --strip-components=1; \
+    tar -xJf "/tmp/xorgproto-${XORGPROTO_VERSION}.tar.xz" \
+      -C /tmp/xorgproto-src --strip-components=1; \
+    python3 /opt/meson/meson.py setup /tmp/xorgproto-build /tmp/xorgproto-src \
+      --prefix=/opt/xorgproto \
+      --buildtype=release; \
+    ninja -C /tmp/xorgproto-build install; \
+    tar -xJf "/tmp/libxcvt-${LIBXCVT_VERSION}.tar.xz" \
+      -C /tmp/libxcvt-src --strip-components=1; \
+    python3 /opt/meson/meson.py setup /tmp/libxcvt-build /tmp/libxcvt-src \
+      --prefix=/opt/xwayland \
+      --libdir=lib \
+      --default-library=static \
+      --buildtype=release; \
+    ninja -C /tmp/libxcvt-build install; \
+    tar -xJf "/tmp/xorg-server-${XORG_SERVER_VERSION}.tar.xz" \
+      -C /tmp/xorg-server-src --strip-components=1; \
+    cd /tmp/xorg-server-src; \
+    patch --fuzz=0 --batch --forward -p1 < /tmp/xorg-server-21.1.24-xvfb-dri3.patch; \
+    PKG_CONFIG_PATH=/opt/xwayland/lib/pkgconfig:/opt/xorgproto/share/pkgconfig \
+      python3 /opt/meson/meson.py setup /tmp/xorg-server-build /tmp/xorg-server-src \
+      --prefix=/usr/local \
+      --buildtype=release \
+      -Dxorg=false \
+      -Dxephyr=false \
+      -Dxnest=false \
+      -Dxvfb=true \
+      -Dxwin=false \
+      -Dxquartz=false \
+      -Dglamor=true \
+      -Dsecure-rpc=false \
+      -Dudev=false \
+      -Dudev_kms=false \
+      -Dsystemd_logind=false \
+      -Dpciaccess=false \
+      -Dint10=false \
+      -Dlinux_acpi=false \
+      -Dlinux_apm=false; \
+    ninja -C /tmp/xorg-server-build; \
+    install -D -m 0755 /tmp/xorg-server-build/hw/vfb/Xvfb /usr/local/bin/Xvfb; \
+    /usr/local/bin/Xvfb -help 2>&1 | grep -F -- '-vfbdevice device-path'; \
+    tar -xJf "/tmp/wayland-${WAYLAND_VERSION}.tar.xz" \
+      -C /tmp/wayland-src --strip-components=1; \
+    python3 /opt/meson/meson.py setup /tmp/wayland-build /tmp/wayland-src \
+      --prefix=/opt/xwayland \
+      --libdir=lib \
+      --buildtype=release \
+      -Dtests=false \
+      -Ddocumentation=false \
+      -Ddtd_validation=false; \
+    ninja -C /tmp/wayland-build install; \
+    tar -xJf "/tmp/wayland-protocols-${WAYLAND_PROTOCOLS_VERSION}.tar.xz" \
+      -C /tmp/wayland-protocols-src --strip-components=1; \
+    PATH=/opt/xwayland/bin:${PATH} \
+      PKG_CONFIG_PATH=/opt/xwayland/lib/pkgconfig:/opt/xwayland/share/pkgconfig \
+      python3 /opt/meson/meson.py setup \
+        /tmp/wayland-protocols-build /tmp/wayland-protocols-src \
+        --prefix=/opt/xwayland \
+        --libdir=lib \
+        --buildtype=release \
+        -Dtests=false; \
+    ninja -C /tmp/wayland-protocols-build install; \
+    tar -xJf "/tmp/libdrm-${LIBDRM_VERSION}.tar.xz" \
+      -C /tmp/libdrm-src --strip-components=1; \
+    python3 /opt/meson/meson.py setup /tmp/libdrm-build /tmp/libdrm-src \
+      --prefix=/opt/xwayland \
+      --libdir=lib \
+      --buildtype=release \
+      -Dtests=false \
+      -Dcairo-tests=disabled \
+      -Dman-pages=disabled \
+      -Dvalgrind=disabled; \
+    ninja -C /tmp/libdrm-build install; \
+    tar -xJf "/tmp/xwayland-${XWAYLAND_VERSION}.tar.xz" \
+      -C /tmp/xwayland-src --strip-components=1; \
+    PATH=/opt/xwayland/bin:${PATH} \
+      PKG_CONFIG_PATH=/opt/xwayland/lib/pkgconfig:/opt/xwayland/share/pkgconfig:/opt/xorgproto/share/pkgconfig \
+      python3 /opt/meson/meson.py setup /tmp/xwayland-build /tmp/xwayland-src \
+        --prefix=/opt/xwayland \
+        --libdir=lib \
+        --buildtype=release \
+        -Dxkb_dir=/usr/share/X11/xkb \
+        -Dxkb_bin_dir=/usr/bin \
+        -Dglamor=true \
+        -Ddri3=true \
+        -Dxwayland_ei=false \
+        -Dlibdecor=false \
+        -Ddocs=false \
+        -Ddevel-docs=false \
+        -Ddocs-pdf=false \
+        -Dsystemd_notify=false \
+        -Dxselinux=false \
+        -Dsecure-rpc=false \
+        -Dsha1=libgcrypt; \
+    ninja -C /tmp/xwayland-build install; \
+    xwayland_version="$( \
+      LD_LIBRARY_PATH=/opt/xwayland/lib \
+        /opt/xwayland/bin/Xwayland -version 2>&1 || : \
+    )"; \
+    printf '%s\n' "${xwayland_version}"; \
+    printf '%s\n' "${xwayland_version}" | grep -F 'The X.Org Foundation Xwayland Version 24.1.13'
+
+# Build isolated CPython, libxkbcommon, and libva for the Selkies backend.
+# This avoids replacing Focal/Jammy's system Python or ABI-linked packages.
+FROM ${UBUNTU_BASE_IMAGE} AS selkies_python_builder
+ARG SELKIES_PYTHON_VERSION=3.12.11
+ARG SELKIES_PYTHON_SHA256=7b8d59af8216044d2313de8120bfc2cc00a9bd2e542f15795e1d616c51faf3d6
+ARG SELKIES_REVISION=348bc4f61da66198573e7e57db9a266aca1991d5
+ARG LIBXKBCOMMON_VERSION=1.5.0
+ARG LIBXKBCOMMON_SHA256=560f11c4bbbca10f495f3ef7d3a6aa4ca62b4f8fb0b52e7d459d18a26e46e017
+ARG LIBVA_VERSION=2.22.0
+ARG LIBVA_SHA256=467c418c2640a178c6baad5be2e00d569842123763b80507721ab87eb7af8735
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      bison \
+      ca-certificates \
+      libbz2-dev \
+      libdrm-dev \
+      libffi-dev \
+      libgdbm-dev \
+      libgbm1 \
+      liblzma-dev \
+      libncursesw5-dev \
+      libpixman-1-0 \
+      libreadline-dev \
+      libsqlite3-dev \
+      libssl-dev \
+      libx11-dev \
+      libx11-xcb-dev \
+      libxcb-dri3-dev \
+      libxcb1-dev \
+      libxext-dev \
+      libxfixes-dev \
+      meson \
+      ninja-build \
+      pkg-config \
+      tk-dev \
+      uuid-dev \
+      xz-utils \
+      zlib1g-dev; \
+    rm -rf /var/lib/apt/lists/*
+
+ADD --checksum=sha256:7b8d59af8216044d2313de8120bfc2cc00a9bd2e542f15795e1d616c51faf3d6 \
+    https://www.python.org/ftp/python/3.12.11/Python-3.12.11.tgz \
+    /tmp/Python-3.12.11.tgz
+ADD --checksum=sha256:560f11c4bbbca10f495f3ef7d3a6aa4ca62b4f8fb0b52e7d459d18a26e46e017 \
+    https://xkbcommon.org/download/libxkbcommon-1.5.0.tar.xz \
+    /tmp/libxkbcommon-1.5.0.tar.xz
+ADD --checksum=sha256:467c418c2640a178c6baad5be2e00d569842123763b80507721ab87eb7af8735 \
+    https://github.com/intel/libva/archive/refs/tags/2.22.0.tar.gz \
+    /tmp/libva-2.22.0.tar.gz
+ADD --checksum=sha256:c18f7292cf895f44769e19347d9acb9296a907aa0067fe813d1dd2e7d0413f5d \
+    https://github.com/selkies-project/selkies/archive/348bc4f61da66198573e7e57db9a266aca1991d5.tar.gz \
+    /tmp/selkies.tar.gz
+COPY --from=uv /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock /tmp/selkies-lock/
+
+# Assemble the private native libraries, install the hash-locked Python
+# dependency set, and then install the checksum-bound Selkies source itself.
+RUN set -eu; \
+    mkdir -p /tmp/libva-src /tmp/python-src /tmp/selkies-src /tmp/xkbcommon-src; \
+    tar -xJf /tmp/libxkbcommon-1.5.0.tar.xz -C /tmp/xkbcommon-src --strip-components=1; \
+    meson setup /tmp/xkbcommon-src/build /tmp/xkbcommon-src \
+      --prefix=/opt/selkies-xkbcommon \
+      --libdir=lib \
+      --buildtype=release \
+      -Denable-tools=false \
+      -Denable-x11=false \
+      -Denable-docs=false \
+      -Denable-wayland=false \
+      -Denable-xkbregistry=false; \
+    ninja -C /tmp/xkbcommon-src/build install; \
+    tar -xzf /tmp/libva-2.22.0.tar.gz -C /tmp/libva-src --strip-components=1; \
+    meson setup /tmp/libva-src/build /tmp/libva-src \
+      --prefix=/opt/selkies-libva \
+      --libdir=lib \
+      --buildtype=release \
+      -Dwith_x11=yes \
+      -Dwith_glx=no \
+      -Dwith_wayland=no \
+      -Denable_docs=false; \
+    ninja -C /tmp/libva-src/build install; \
+    tar -xzf /tmp/Python-3.12.11.tgz -C /tmp/python-src --strip-components=1; \
+    cd /tmp/python-src; \
+    ./configure \
+      --prefix=/opt/selkies-python \
+      --enable-shared \
+      --with-ensurepip=install; \
+    make -j"$(nproc)"; \
+    make install; \
+    printf '%s\n' /opt/selkies-python/lib > /etc/ld.so.conf.d/selkies-python.conf; \
+    printf '%s\n' /opt/selkies-xkbcommon/lib > /etc/ld.so.conf.d/selkies-xkbcommon.conf; \
+    printf '%s\n' /opt/selkies-libva/lib > /etc/ld.so.conf.d/selkies-libva.conf; \
+    ldconfig; \
+    /opt/selkies-python/bin/python3 -m venv /opt/selkies-venv; \
+    cd /tmp/selkies-lock; \
+    uv export --locked --no-dev --no-emit-project --format requirements.txt \
+      --output-file /tmp/selkies-runtime.txt; \
+    CFLAGS=-I/opt/selkies-xkbcommon/include \
+      LDFLAGS=-L/opt/selkies-xkbcommon/lib \
+      PKG_CONFIG_PATH=/opt/selkies-xkbcommon/lib/pkgconfig \
+      uv pip sync --python /opt/selkies-venv/bin/python --require-hashes --no-cache \
+        /tmp/selkies-runtime.txt; \
+    tar -xzf /tmp/selkies.tar.gz -C /tmp/selkies-src --strip-components=1; \
+    uv pip install --python /opt/selkies-venv/bin/python --no-cache --no-deps \
+      --no-build-isolation /tmp/selkies-src; \
+    test "$(/opt/selkies-venv/bin/python -c 'from importlib.metadata import version; print(version("pixelflux"))')" = "2.0.0"; \
+    test "$(/opt/selkies-venv/bin/python -c 'from importlib.metadata import version; print(version("pcmflux"))')" = "2.0.0"; \
+    LD_LIBRARY_PATH=/opt/selkies-libva/lib:/opt/selkies-xkbcommon/lib \
+      /opt/selkies-venv/bin/python -c 'from pixelflux import CaptureSettings, ScreenCapture; from selkies import media_pipeline; assert media_pipeline.CaptureSettings is CaptureSettings; assert media_pipeline.ScreenCapture is ScreenCapture'; \
+    rm -rf /tmp/*
+
+# Final runtime: retain LinuxServer's s6/PUID conventions and add only the
+# compatibility artifacts built for this exact Focal or Jammy base.
+FROM ${UBUNTU_BASE_IMAGE}
+ARG BUILD_DATE
+ARG VERSION
+ARG EXPECTED_UBUNTU_CODENAME=focal
+ARG SELKIES_REVISION=348bc4f61da66198573e7e57db9a266aca1991d5
+ARG DESKTOP_USER=ivar
+
+LABEL org.opencontainers.image.title="TalTech IVAR Lab Ubuntu Desktop (Selkies compatibility)" \
+      org.opencontainers.image.description="Ubuntu Focal/Jammy MATE desktop over Selkies Wayland with SSH" \
+      org.opencontainers.image.source="https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${VERSION}"
+
+# Runtime paths select the private compatibility libraries before distro copies.
+ENV DEBIAN_FRONTEND=noninteractive \
+    AUTO_GPU=true \
+    DESKTOP_USER=${DESKTOP_USER} \
+    DISPLAY=:1 \
+    HOME=/config \
+    LD_LIBRARY_PATH=/opt/xwayland/lib:/opt/selkies-libva/lib:/opt/selkies-xkbcommon/lib \
+    PATH=/opt/selkies-venv/bin:/opt/selkies-python/bin:/opt/xwayland/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    PULSE_RUNTIME_PATH=/defaults \
+    XKB_CONFIG_ROOT=/usr/share/X11/xkb \
+    NVIDIA_DRIVER_CAPABILITIES=all \
+    PIXELFLUX_WAYLAND=true \
+    DISABLE_DRI3=false \
+    DISABLE_ZINK=false \
+    NO_GAMEPAD=true \
+    SELKIES_ENCODER="x264enc,jpeg" \
+    SELKIES_IS_MANUAL_RESOLUTION_MODE=true \
+    SELKIES_MANUAL_WIDTH=1920 \
+    SELKIES_MANUAL_HEIGHT=1080 \
+    SELKIES_SCALING_DPI=96 \
+    SELKIES_FRAMERATE=60 \
+    SELKIES_COMMAND_ENABLED=false \
+    SELKIES_ENABLE_SHARING=false \
+    SELKIES_ENABLE_COLLAB=false \
+    SELKIES_ENABLE_SHARED=false \
+    START_DOCKER=false \
+    DISABLE_SUDO=true \
+    SSH_PORT=22
+
+# Validate the Ubuntu lane, install desktop/media runtime packages, and remove
+# inherited password and privilege-escalation paths from the abc account.
+RUN set -eu; \
+    . /etc/os-release; \
+    case "${VERSION_CODENAME}" in \
+      focal|jammy) ;; \
+      *) echo "Selkies compatibility image requires Ubuntu Focal or Jammy, got ${VERSION_CODENAME}" >&2; exit 64 ;; \
+    esac; \
+    if [ "${VERSION_CODENAME}" != "${EXPECTED_UBUNTU_CODENAME}" ]; then \
+      echo "Expected Ubuntu ${EXPECTED_UBUNTU_CODENAME}, got ${VERSION_CODENAME}" >&2; \
+      exit 64; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      at-spi2-core \
+      breeze-cursor-theme \
+      caja-open-terminal \
+      ca-certificates \
+      cmatrix \
+      dbus-x11 \
+      dconf-cli \
+      file \
+      fonts-noto-cjk \
+      fonts-noto-color-emoji \
+      fonts-noto-core \
+      git \
+      htop \
+      iproute2 \
+      iputils-ping \
+      libgirepository-1.0-1 \
+      libgl1-mesa-dri \
+      libgtk-3-0 \
+      libjpeg-turbo8 \
+      libnginx-mod-http-fancyindex \
+      libnotify-bin \
+      libopus0 \
+      libpulse0 \
+      libvulkan1 \
+      libxkbcommon0 \
+      libxkbcommon-x11-0 \
+      mate-applet-brisk-menu \
+      mate-applets \
+      mate-desktop-environment-core \
+      mate-system-monitor \
+      mate-terminal \
+      mate-tweak \
+      mesa-utils \
+      mesa-va-drivers \
+      mesa-vulkan-drivers \
+      mozo \
+      nano \
+      netcat-openbsd \
+      nginx \
+      nmap \
+      openbox \
+      openssh-server \
+      openssl \
+      papirus-icon-theme \
+      pciutils \
+      plank \
+      procps \
+      pulseaudio \
+      pulseaudio-utils \
+      python3-gi \
+      ssl-cert \
+      tar \
+      terminator \
+      util-linux \
+      vainfo \
+      vim \
+      vulkan-tools \
+      x11-apps \
+      x11-common \
+      x11-utils \
+      x11-xkb-utils \
+      x11-xserver-utils \
+      xauth \
+      xclip \
+      xdg-utils \
+      xdotool \
+      xfonts-base \
+      xkb-data \
+      xsel \
+      xserver-common \
+      xserver-xorg-core \
+      xsettingsd \
+      xterm \
+      xwayland \
+      xvfb \
+      yaru-theme-gtk \
+      zsh; \
+    if apt-cache show xcvt >/dev/null 2>&1; then \
+      apt-get install -y --no-install-recommends xcvt; \
+    fi; \
+    gpasswd --delete abc sudo || true; \
+    usermod --shell /bin/bash abc; \
+    passwd --lock abc; \
+    rm -f /etc/sudoers.d/abc /etc/ssh/ssh_host_*; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Import only target-built native artifacts plus architecture-neutral frontend,
+# templates, and s6 service definitions from the matching Selkies donor.
+COPY --from=selkies_python_builder /opt/selkies-python/ /opt/selkies-python/
+COPY --from=selkies_python_builder /opt/selkies-venv/ /opt/selkies-venv/
+COPY --from=selkies_python_builder /opt/selkies-xkbcommon/ /opt/selkies-xkbcommon/
+COPY --from=selkies_python_builder /opt/selkies-libva/ /opt/selkies-libva/
+COPY --from=xvfb_builder /usr/local/bin/Xvfb /usr/local/bin/Xvfb
+COPY --from=xvfb_builder /opt/xwayland/ /opt/xwayland/
+COPY --from=current_selkies /usr/share/selkies/ /usr/share/selkies/
+COPY --from=current_selkies /defaults/ /defaults/
+COPY --from=current_selkies /proot-apps/ /proot-apps/
+COPY --from=current_selkies /etc/s6-overlay/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+
+# Overlay TalTech desktop defaults, security services, wallpaper, and GPU
+# verification after the donor assets so project policy wins deterministically.
+COPY files/etc/dconf/ /etc/dconf/
+COPY files/usr/local/bin/taltech-verify-gpu /usr/local/bin/taltech-verify-gpu
+COPY files/usr/share/backgrounds/taltech/ /usr/share/backgrounds/taltech/
+COPY files/config/.config/ /defaults/config/.config/
+COPY selkies-files/ /
+COPY build-scripts/configure-desktop-user.py /tmp/configure-desktop-user.py
+
+# Register private libraries, disable embedded Docker, rewrite the inherited
+# desktop account, and prepare root-owned persistent state.
+RUN set -eu; \
+    printf '%s\n' /opt/selkies-python/lib > /etc/ld.so.conf.d/selkies-python.conf; \
+    printf '%s\n' /opt/selkies-xkbcommon/lib > /etc/ld.so.conf.d/selkies-xkbcommon.conf; \
+    printf '%s\n' /opt/selkies-libva/lib > /etc/ld.so.conf.d/selkies-libva.conf; \
+    ldconfig; \
+    ln -sf /opt/selkies-venv/bin/selkies /usr/local/bin/selkies; \
+    rm -rf \
+      /etc/s6-overlay/s6-rc.d/svc-docker \
+      /etc/s6-overlay/s6-rc.d/user/contents.d/svc-docker; \
+    /usr/bin/python3 /tmp/configure-desktop-user.py --user "${DESKTOP_USER}"; \
+    if [ "${DESKTOP_USER}" != abc ]; then \
+      if getent passwd "${DESKTOP_USER}" >/dev/null 2>&1; then \
+        echo "DESKTOP_USER account already exists: ${DESKTOP_USER}" >&2; exit 64; \
+      fi; \
+      if getent group "${DESKTOP_USER}" >/dev/null 2>&1; then \
+        echo "DESKTOP_USER group already exists: ${DESKTOP_USER}" >&2; exit 64; \
+      fi; \
+      groupmod --new-name "${DESKTOP_USER}" abc; \
+      usermod --login "${DESKTOP_USER}" abc; \
+    fi; \
+    rm -f /tmp/configure-desktop-user.py; \
+    dconf update; \
+    install -d -o root -g root -m 0700 /var/lib/taltech-desktop
+
+# Runtime interfaces and persistent storage.
+EXPOSE 22 3001
+VOLUME /config /var/lib/taltech-desktop
