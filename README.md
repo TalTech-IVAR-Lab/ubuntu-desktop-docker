@@ -21,7 +21,7 @@ All images include:
 
 - MATE desktop
 - [OpenSSH] server
-- Persistent user home under `/config`, with root-owned host keys in a separate state volume
+- Conventional user home at `/home/ivar`, backed by persistent storage under `/config`, with root-owned host keys in a separate state volume
 - `PUID`/`PGID` user mapping inherited from the LinuxServer base
 - Command line packages:
   - [Terminator] as the default terminal application
@@ -75,7 +75,6 @@ docker run -d \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
-  -e CUSTOM_USER=taltech \
   -e PASSWORD_FILE=/run/secrets/selkies-password \
   -p 3001:3001 `# https` \
   -p 2222:22 `# ssh` \
@@ -97,14 +96,18 @@ On multi-GPU hosts, set both `DRINODE` and `DRI_NODE` to the same render device;
 setting them to different devices deliberately enables CPU readback.
 
 SSH is key-only. Add the desired public keys to
-`/config/.ssh/authorized_keys`; web authentication does not unlock the Linux
+`/home/ivar/.ssh/authorized_keys`; web authentication does not unlock the Linux
 account. The remote user has no passwordless sudo and no Docker socket.
 
-The internal Linux desktop account defaults to `ivar`. To use a different
-account name in a custom build, pass `--build-arg DESKTOP_USER=taltech`.
-`DESKTOP_USER` is fixed at build time and is independent of `CUSTOM_USER`,
-which controls only the Selkies web login. Changing it does not change the
-persistent home path (`/config`) or the runtime `PUID`/`PGID` mapping.
+The internal Linux desktop account defaults to `ivar`, and the Selkies web
+login defaults to the same `ivar` name. To use a different account name in a
+custom build, pass `--build-arg DESKTOP_USER=taltech`; this also changes the
+default web username. If the two names need to differ, override the web
+username at runtime with `CUSTOM_USER`. This changes only HTTP authentication:
+it does not rename the Linux account or make the web password valid for SSH.
+The desktop home is `/home/<DESKTOP_USER>`; `/config` remains its persistent
+backing volume. Changing the account name does not change the runtime
+`PUID`/`PGID` mapping.
 
 Use all remote access only on a trusted network or behind a VPN. Do not publish
 the ports directly to the Internet. The separate state volume keeps root-owned

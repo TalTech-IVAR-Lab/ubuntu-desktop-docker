@@ -54,6 +54,10 @@ as_abc() {
     s6-setuidgid abc "$@"
 }
 
+desktop_home=/home/abc
+/usr/bin/python3 /usr/local/libexec/taltech-desktop-home.py validate \
+    --user abc --expected-home "${desktop_home}" --home-env "${HOME:-}"
+
 xdg_runtime=/config/.XDG
 if [[ -L ${xdg_runtime} || ( -e ${xdg_runtime} && ! -d "${xdg_runtime}" ) ]]; then
     echo "Selkies runtime path must be a real directory: ${xdg_runtime}" >&2

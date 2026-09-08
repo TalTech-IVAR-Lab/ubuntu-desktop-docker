@@ -33,7 +33,7 @@ LABEL org.opencontainers.image.title="TalTech IVAR Lab Ubuntu Desktop (Selkies)"
 ENV DEBIAN_FRONTEND=noninteractive \
     AUTO_GPU=true \
     DESKTOP_USER=${DESKTOP_USER} \
-    HOME=/config \
+    CUSTOM_USER=${DESKTOP_USER} \
     NVIDIA_DRIVER_CAPABILITIES=all \
     PIXELFLUX_WAYLAND=true \
     SELKIES_IS_MANUAL_RESOLUTION_MODE=true \
@@ -147,7 +147,8 @@ COPY files/config/.config/ /defaults/config/.config/
 COPY selkies-files/ /
 COPY build-scripts/configure-desktop-user.py /tmp/configure-desktop-user.py
 
-# Rewrite the inherited LinuxServer account to the configured desktop user and
+# Rewrite the inherited LinuxServer account to the configured desktop user,
+# expose its conventional home over the persistent /config backing store, and
 # prepare root-owned persistent state after all templates are in place.
 RUN set -eu; \
     /usr/bin/python3 /tmp/configure-desktop-user.py --user "${DESKTOP_USER}"; \
@@ -161,9 +162,17 @@ RUN set -eu; \
       groupmod --new-name "${DESKTOP_USER}" abc; \
       usermod --login "${DESKTOP_USER}" abc; \
     fi; \
+    usermod --home "/home/${DESKTOP_USER}" "${DESKTOP_USER}"; \
+    desktop_home="/home/${DESKTOP_USER}"; \
+    /usr/bin/python3 /usr/local/libexec/taltech-desktop-home.py prepare \
+      --user "${DESKTOP_USER}" --expected-home "${desktop_home}"; \
     rm -f /tmp/configure-desktop-user.py; \
     dconf update; \
     install -d -o root -g root -m 0700 /var/lib/taltech-desktop
+
+# Activate the conventional home only after its persistent symlink exists, so
+# package installers and build helpers cannot populate /home/<user> early.
+ENV HOME=/home/${DESKTOP_USER}
 
 # Runtime interfaces and persistent storage.
 EXPOSE 22 3001
