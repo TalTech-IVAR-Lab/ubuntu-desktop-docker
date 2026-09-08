@@ -36,6 +36,9 @@ SELKIES_UV_LOCK = ROOT / "uv.lock"
 SELKIES_REQUIREMENTS = ROOT / "selkies-requirements.txt"
 XVFB_DRI3_PATCH = ROOT / "patches" / "xorg-server-21.1.24-xvfb-dri3.patch"
 DESKTOP_USER_REWRITER = ROOT / "build-scripts" / "configure-desktop-user.py"
+DESKTOP_HOME_HELPER = (
+    SELKIES_FILES / "usr" / "local" / "libexec" / "taltech-desktop-home.py"
+)
 IVAR_WALLPAPER = (
     ROOT / "files" / "usr" / "share" / "backgrounds" / "taltech" / "ivar-lab.png"
 )
@@ -50,6 +53,15 @@ class ImageContractTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location(name, GPU_SELECTOR)
         if spec is None or spec.loader is None:
             raise AssertionError(f"Could not load {GPU_SELECTOR}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def _load_desktop_home_helper(name: str) -> ModuleType:
+        spec = importlib.util.spec_from_file_location(name, DESKTOP_HOME_HELPER)
+        if spec is None or spec.loader is None:
+            raise AssertionError(f"Could not load {DESKTOP_HOME_HELPER}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -833,6 +845,7 @@ class ImageContractTests(unittest.TestCase):
             content = dockerfile.read_text()
             self.assertIn("ARG DESKTOP_USER=ivar", content)
             self.assertIn("DESKTOP_USER=${DESKTOP_USER}", content)
+            self.assertIn("CUSTOM_USER=${DESKTOP_USER}", content)
             self.assertIn(
                 "COPY build-scripts/configure-desktop-user.py ", content
             )
@@ -846,9 +859,136 @@ class ImageContractTests(unittest.TestCase):
             self.assertIn('getent group "${DESKTOP_USER}"', content)
 
         readme = README.read_text()
+        normalized_readme = " ".join(readme.split())
         self.assertIn("DESKTOP_USER", readme)
         self.assertIn("defaults to `ivar`", readme)
-        self.assertIn("independent of `CUSTOM_USER`", readme)
+        self.assertIn(
+            "web login defaults to the same `ivar` name", normalized_readme
+        )
+        self.assertIn(
+            "override the web username at runtime with `CUSTOM_USER`",
+            normalized_readme,
+        )
+        self.assertNotIn("-e CUSTOM_USER=taltech", readme)
+
+    def test_desktop_user_has_conventional_home_backed_by_config(self) -> None:
+        for dockerfile in (SELKIES_DOCKERFILE, SELKIES_COMPAT_DOCKERFILE):
+            content = dockerfile.read_text()
+            self.assertIn("HOME=/home/${DESKTOP_USER}", content)
+            self.assertNotIn("HOME=/config", content)
+            self.assertIn(
+                'usermod --home "/home/${DESKTOP_USER}"',
+                content,
+            )
+            self.assertIn('desktop_home="/home/${DESKTOP_USER}"', content)
+            self.assertIn(
+                "/usr/local/libexec/taltech-desktop-home.py prepare", content
+            )
+            self.assertIn(
+                '--user "${DESKTOP_USER}" --expected-home "${desktop_home}"',
+                content,
+            )
+            self.assertIn("VOLUME /config /var/lib/taltech-desktop", content)
+            self.assertGreater(
+                content.index("HOME=/home/${DESKTOP_USER}"),
+                content.index("taltech-desktop-home.py prepare"),
+                "HOME must not point at the conventional path until its "
+                "persistent symlink has been prepared",
+            )
+
+        init = (SELKIES_S6_ROOT / "init-taltech-selkies" / "run").read_text()
+        self.assertIn("desktop_home=/home/abc", init)
+        self.assertIn("/usr/local/libexec/taltech-desktop-home.py validate", init)
+        self.assertIn("--user abc", init)
+        self.assertIn('--expected-home "${desktop_home}"', init)
+        self.assertIn('--home-env "${HOME:-}"', init)
+
+        readme = README.read_text()
+        normalized_readme = " ".join(readme.split())
+        self.assertIn("`/home/ivar`", readme)
+        self.assertIn("`/home/ivar/.ssh/authorized_keys`", readme)
+        self.assertIn("`/config` remains its persistent backing volume", normalized_readme)
+
+    def test_desktop_home_helper_prepares_each_supported_path_state(self) -> None:
+        helper = self._load_desktop_home_helper("desktop_home_prepare_test")
+
+        def make_root() -> tuple[tempfile.TemporaryDirectory[str], Path]:
+            temporary = tempfile.TemporaryDirectory()
+            root = Path(temporary.name)
+            (root / "etc").mkdir()
+            (root / "home").mkdir()
+            (root / "etc" / "passwd").write_text(
+                "ivar:x:911:911::/home/ivar:/bin/bash\n"
+            )
+            return temporary, root
+
+        for initial_state in ("absent", "empty-directory", "correct-symlink"):
+            with self.subTest(initial_state=initial_state):
+                temporary, root = make_root()
+                with temporary:
+                    home = root / "home" / "ivar"
+                    if initial_state == "empty-directory":
+                        home.mkdir()
+                    elif initial_state == "correct-symlink":
+                        home.symlink_to("/config")
+
+                    helper.prepare_home(root, "ivar", "/home/ivar")
+
+                    self.assertTrue(home.is_symlink())
+                    self.assertEqual("/config", os.readlink(home))
+
+        for initial_state in ("non-empty-directory", "wrong-symlink", "regular-file"):
+            with self.subTest(initial_state=initial_state):
+                temporary, root = make_root()
+                with temporary:
+                    home = root / "home" / "ivar"
+                    if initial_state == "non-empty-directory":
+                        home.mkdir()
+                        (home / "keep-me").write_text("important")
+                    elif initial_state == "wrong-symlink":
+                        home.symlink_to("/tmp")
+                    else:
+                        home.write_text("important")
+
+                    with self.assertRaisesRegex(SystemExit, "78"):
+                        helper.prepare_home(root, "ivar", "/home/ivar")
+
+                    if initial_state == "non-empty-directory":
+                        self.assertEqual("important", (home / "keep-me").read_text())
+                    elif initial_state == "wrong-symlink":
+                        self.assertEqual("/tmp", os.readlink(home))
+                    else:
+                        self.assertEqual("important", home.read_text())
+
+    def test_desktop_home_helper_validates_runtime_contract(self) -> None:
+        helper = self._load_desktop_home_helper("desktop_home_validate_test")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "etc").mkdir()
+            (root / "home").mkdir()
+            passwd = root / "etc" / "passwd"
+            passwd.write_text("ivar:x:911:911::/home/ivar:/bin/bash\n")
+            home = root / "home" / "ivar"
+            home.symlink_to("/config")
+
+            helper.validate_home(root, "ivar", "/home/ivar", "/home/ivar")
+
+            with self.assertRaisesRegex(SystemExit, "78"):
+                helper.validate_home(root, "ivar", "/home/ivar", "/config")
+
+            passwd.write_text("ivar:x:911:911::/config:/bin/bash\n")
+            with self.assertRaisesRegex(SystemExit, "78"):
+                helper.validate_home(root, "ivar", "/home/ivar", "/home/ivar")
+
+            passwd.write_text("ivar:x:911:911::/home/ivar:/bin/bash\n")
+            home.unlink()
+            with self.assertRaisesRegex(SystemExit, "78"):
+                helper.validate_home(root, "ivar", "/home/ivar", "/home/ivar")
+
+            home.symlink_to("/tmp")
+            with self.assertRaisesRegex(SystemExit, "78"):
+                helper.validate_home(root, "ivar", "/home/ivar", "/home/ivar")
 
     def test_desktop_user_rewriter_is_strict_and_rewrites_runtime_contract(self) -> None:
         self.assertTrue(DESKTOP_USER_REWRITER.is_file(), DESKTOP_USER_REWRITER)
@@ -867,7 +1007,11 @@ class ImageContractTests(unittest.TestCase):
             for path in (service, ssh_config, crontab):
                 path.parent.mkdir(parents=True, exist_ok=True)
             service.write_text(
-                "as_abc() { s6-setuidgid abc \"$@\"; }\nchown abc:abc /config\n"
+                "as_abc() { s6-setuidgid abc \"$@\"; }\n"
+                "desktop_home=/home/abc\n"
+                "taltech-desktop-home.py validate --user abc "
+                "--expected-home \"${desktop_home}\" --home-env \"${HOME:-}\"\n"
+                "chown abc:abc /config\n"
             )
             ssh_config.write_text("AllowUsers abc\n")
             crontab.write_text("# abc desktop crontab\n")
@@ -889,6 +1033,9 @@ class ImageContractTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertEqual(
                 'as_taltech() { s6-setuidgid taltech "$@"; }\n'
+                "desktop_home=/home/taltech\n"
+                "taltech-desktop-home.py validate --user taltech "
+                '--expected-home "${desktop_home}" --home-env "${HOME:-}"\n'
                 "chown taltech:taltech /config\n",
                 service.read_text(),
             )
