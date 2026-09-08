@@ -332,8 +332,8 @@ LABEL org.opencontainers.image.title="TalTech IVAR Lab Ubuntu Desktop (Selkies c
 ENV DEBIAN_FRONTEND=noninteractive \
     AUTO_GPU=true \
     DESKTOP_USER=${DESKTOP_USER} \
+    CUSTOM_USER=${DESKTOP_USER} \
     DISPLAY=:1 \
-    HOME=/config \
     LD_LIBRARY_PATH=/opt/xwayland/lib:/opt/selkies-libva/lib:/opt/selkies-xkbcommon/lib \
     PATH=/opt/selkies-venv/bin:/opt/selkies-python/bin:/opt/xwayland/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     PULSE_RUNTIME_PATH=/defaults \
@@ -481,7 +481,8 @@ COPY selkies-files/ /
 COPY build-scripts/configure-desktop-user.py /tmp/configure-desktop-user.py
 
 # Register private libraries, disable embedded Docker, rewrite the inherited
-# desktop account, and prepare root-owned persistent state.
+# desktop account, expose its conventional home over the persistent /config
+# backing store, and prepare root-owned persistent state.
 RUN set -eu; \
     printf '%s\n' /opt/selkies-python/lib > /etc/ld.so.conf.d/selkies-python.conf; \
     printf '%s\n' /opt/selkies-xkbcommon/lib > /etc/ld.so.conf.d/selkies-xkbcommon.conf; \
@@ -502,9 +503,17 @@ RUN set -eu; \
       groupmod --new-name "${DESKTOP_USER}" abc; \
       usermod --login "${DESKTOP_USER}" abc; \
     fi; \
+    usermod --home "/home/${DESKTOP_USER}" "${DESKTOP_USER}"; \
+    desktop_home="/home/${DESKTOP_USER}"; \
+    /usr/bin/python3 /usr/local/libexec/taltech-desktop-home.py prepare \
+      --user "${DESKTOP_USER}" --expected-home "${desktop_home}"; \
     rm -f /tmp/configure-desktop-user.py; \
     dconf update; \
     install -d -o root -g root -m 0700 /var/lib/taltech-desktop
+
+# Activate the conventional home only after its persistent symlink exists, so
+# package installers and build helpers cannot populate /home/<user> early.
+ENV HOME=/home/${DESKTOP_USER}
 
 # Runtime interfaces and persistent storage.
 EXPOSE 22 3001
